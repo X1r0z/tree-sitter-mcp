@@ -227,11 +227,12 @@ def get_callers(path: str, function_name: str) -> dict:
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             reverse_graph = analyzer.get_reverse_call_graph()
+            callers = sorted(reverse_graph.get(function_name, []), key=lambda x: x["line"])
             return {
                 "path": path,
                 "path_type": "file",
                 "function": function_name,
-                "callers": reverse_graph.get(function_name, []),
+                "callers": callers,
             }
         else:
             project = ProjectAnalyzer(path)
@@ -259,11 +260,12 @@ def get_callees(path: str, function_name: str) -> dict:
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             graph = analyzer.get_call_graph()
+            callees = sorted(graph.get(function_name, []), key=lambda x: x["line"])
             return {
                 "path": path,
                 "path_type": "file",
                 "function": function_name,
-                "callees": graph.get(function_name, []),
+                "callees": callees,
             }
         else:
             project = ProjectAnalyzer(path)
@@ -360,6 +362,7 @@ def get_function_variables(path: str, function_name: str) -> dict:
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             variables = analyzer.get_function_variables(function_name)
+            variables = sorted(variables, key=lambda v: v.location.start_line)
             return {
                 "path": path,
                 "path_type": "file",
@@ -375,6 +378,7 @@ def get_function_variables(path: str, function_name: str) -> dict:
                     func = analyzer.get_function_by_name(function_name)
                     if func:
                         variables = analyzer.get_function_variables(function_name)
+                        variables = sorted(variables, key=lambda v: v.location.start_line)
                         return {
                             "path": path,
                             "path_type": project.path_type,
@@ -400,6 +404,7 @@ def get_function_strings(path: str, function_name: str) -> dict:
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             strings = analyzer.get_function_strings(function_name)
+            strings = sorted(strings, key=lambda s: s.location.start_line)
             return {
                 "path": path,
                 "path_type": "file",
@@ -415,6 +420,7 @@ def get_function_strings(path: str, function_name: str) -> dict:
                     func = analyzer.get_function_by_name(function_name)
                     if func:
                         strings = analyzer.get_function_strings(function_name)
+                        strings = sorted(strings, key=lambda s: s.location.start_line)
                         return {
                             "path": path,
                             "path_type": project.path_type,

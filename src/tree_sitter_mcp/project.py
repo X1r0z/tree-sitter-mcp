@@ -212,7 +212,7 @@ class ProjectAnalyzer:
                             "file": file_path,
                         }
                     )
-        return callers
+        return sorted(callers, key=lambda x: (x["file"], x["line"]))
 
     def get_callees(self, function_name: str) -> list[dict]:
         """Find all functions called by a function across all files."""
@@ -222,10 +222,11 @@ class ProjectAnalyzer:
                 func = analyzer.get_function_by_name(function_name)
                 if func:
                     callees = analyzer.get_function_callees(function_name)
-                    return [
+                    result = [
                         {"callee": c["callee"], "line": c["line"], "file": file_path}
                         for c in callees
                     ]
+                    return sorted(result, key=lambda x: x["line"])
         return []
 
     def find_references(self, name: str) -> list[dict]:
