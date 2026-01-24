@@ -290,26 +290,29 @@ class CodeAnalyzer:
             return func.body
         return None
 
-    def get_function_callees(self, function_name: str) -> list[str]:
+    def get_function_callees(self, function_name: str) -> list[dict]:
         """Get all functions/methods called by a specific function."""
         calls = [c for c in self.get_calls() if c.caller_function == function_name]
-        callees = []
+        callees: list[dict] = []
         for call in calls:
             callee = call.callee
             if call.object_name:
                 callee = f"{call.object_name}.{callee}"
-            if callee not in callees:
-                callees.append(callee)
+            entry = {"callee": callee, "line": call.location.start_line}
+            if not any(e["callee"] == callee for e in callees):
+                callees.append(entry)
         return callees
 
-    def get_function_callers(self, function_name: str) -> list[str]:
+    def get_function_callers(self, function_name: str) -> list[dict]:
         """Get all functions that call a specific function."""
         all_calls = self.get_calls()
-        callers = []
+        callers: list[dict] = []
         for call in all_calls:
             caller = call.caller_function or "<module>"
-            if call.callee == function_name and caller not in callers:
-                callers.append(caller)
+            if call.callee == function_name:
+                entry = {"caller": caller, "line": call.location.start_line}
+                if not any(e["caller"] == caller for e in callers):
+                    callers.append(entry)
         return callers
 
     def get_classes(self) -> list[ClassInfo]:
@@ -517,9 +520,9 @@ class CodeAnalyzer:
         walk(self._tree.root_node)
         return refs
 
-    def get_call_graph(self) -> dict[str, list[str]]:
+    def get_call_graph(self) -> dict[str, list[dict]]:
         calls = self.get_calls()
-        graph: dict[str, list[str]] = {}
+        graph: dict[str, list[dict]] = {}
 
         for call in calls:
             caller = call.caller_function or "<module>"
@@ -528,21 +531,23 @@ class CodeAnalyzer:
             callee = call.callee
             if call.object_name:
                 callee = f"{call.object_name}.{callee}"
-            if callee not in graph[caller]:
-                graph[caller].append(callee)
+            entry = {"callee": callee, "line": call.location.start_line}
+            if not any(e["callee"] == callee for e in graph[caller]):
+                graph[caller].append(entry)
 
         return graph
 
-    def get_reverse_call_graph(self) -> dict[str, list[str]]:
+    def get_reverse_call_graph(self) -> dict[str, list[dict]]:
         calls = self.get_calls()
-        graph: dict[str, list[str]] = {}
+        graph: dict[str, list[dict]] = {}
 
         for call in calls:
             caller = call.caller_function or "<module>"
             callee = call.callee
             if callee not in graph:
                 graph[callee] = []
-            if caller not in graph[callee]:
-                graph[callee].append(caller)
+            entry = {"caller": caller, "line": call.location.start_line}
+            if not any(e["caller"] == caller for e in graph[callee]):
+                graph[callee].append(entry)
 
         return graph

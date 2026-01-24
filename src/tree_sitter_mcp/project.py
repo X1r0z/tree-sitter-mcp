@@ -204,10 +204,11 @@ class ProjectAnalyzer:
             analyzer = self._get_analyzer(file_path)
             if analyzer:
                 file_callers = analyzer.get_function_callers(function_name)
-                for caller in file_callers:
+                for caller_info in file_callers:
                     callers.append(
                         {
-                            "caller": caller,
+                            "caller": caller_info["caller"],
+                            "line": caller_info["line"],
                             "file": file_path,
                         }
                     )
@@ -221,7 +222,10 @@ class ProjectAnalyzer:
                 func = analyzer.get_function_by_name(function_name)
                 if func:
                     callees = analyzer.get_function_callees(function_name)
-                    return [{"callee": c, "file": file_path} for c in callees]
+                    return [
+                        {"callee": c["callee"], "line": c["line"], "file": file_path}
+                        for c in callees
+                    ]
         return []
 
     def find_references(self, name: str) -> list[dict]:
