@@ -156,32 +156,35 @@ def get_variables(path: str) -> dict:
 
 
 @mcp.tool
-def get_callers(path: str, function_name: str) -> dict:
+def get_callers(path: str, function_name: str, class_name: str | None = None) -> dict:
     """Find all functions that call a specific function.
 
     Args:
         path: File path, glob pattern (e.g., **/*.py), or directory path
         function_name: Name of the function to find callers for
+        class_name: Optional class name to filter methods (if None, returns all matches)
     """
     try:
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
-            reverse_graph = analyzer.get_reverse_call_graph()
-            callers = sorted(reverse_graph.get(function_name, []), key=lambda x: x["line"])
+            callers = analyzer.get_function_callers(function_name, class_name)
+            callers = sorted(callers, key=lambda x: x["line"])
             return {
                 "path": path,
                 "path_type": "file",
                 "function": function_name,
+                "class_name": class_name,
                 "callers": callers,
             }
         else:
             project = ProjectAnalyzer(path)
-            callers = project.get_callers(function_name)
+            callers = project.get_callers(function_name, class_name)
             return {
                 "path": path,
                 "path_type": project.path_type,
                 "files_searched": len(project.files),
                 "function": function_name,
+                "class_name": class_name,
                 "callers": callers,
             }
     except Exception as e:
@@ -189,32 +192,35 @@ def get_callers(path: str, function_name: str) -> dict:
 
 
 @mcp.tool
-def get_callees(path: str, function_name: str) -> dict:
+def get_callees(path: str, function_name: str, class_name: str | None = None) -> dict:
     """Find all functions called by a specific function.
 
     Args:
         path: File path, glob pattern (e.g., **/*.py), or directory path
         function_name: Name of the function to find callees for
+        class_name: Optional class name to filter methods (if None, returns all matches)
     """
     try:
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
-            graph = analyzer.get_call_graph()
-            callees = sorted(graph.get(function_name, []), key=lambda x: x["line"])
+            callees = analyzer.get_function_callees(function_name, class_name)
+            callees = sorted(callees, key=lambda x: x["line"])
             return {
                 "path": path,
                 "path_type": "file",
                 "function": function_name,
+                "class_name": class_name,
                 "callees": callees,
             }
         else:
             project = ProjectAnalyzer(path)
-            callees = project.get_callees(function_name)
+            callees = project.get_callees(function_name, class_name)
             return {
                 "path": path,
                 "path_type": project.path_type,
                 "files_searched": len(project.files),
                 "function": function_name,
+                "class_name": class_name,
                 "callees": callees,
             }
     except Exception as e:
@@ -256,33 +262,37 @@ def find_symbols(path: str, name: str) -> dict:
 
 
 @mcp.tool
-def get_function_definition(path: str, function_name: str) -> dict:
+def get_function_definition(path: str, function_name: str, class_name: str | None = None) -> dict:
     """Get the complete definition (source code) of a specific function.
 
     Args:
         path: File path, glob pattern (e.g., **/*.py), or directory path
         function_name: Name of the function to retrieve
+        class_name: Optional class name to filter methods (if None, returns all matches)
     """
     try:
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
-            func = analyzer.get_function_by_name(function_name)
-            if not func:
+            functions = analyzer.get_all_functions_by_name(function_name, class_name)
+            if not functions:
                 return {"error": f"Function '{function_name}' not found"}
             return {
                 "path": path,
                 "path_type": "file",
-                "function": func.to_dict(),
+                "class_name": class_name,
+                "count": len(functions),
+                "functions": [f.to_dict() for f in functions],
             }
         else:
             project = ProjectAnalyzer(path)
-            functions = project.get_all_functions_by_name(function_name)
+            functions = project.get_all_functions_by_name(function_name, class_name)
             if not functions:
                 return {"error": f"Function '{function_name}' not found"}
             return {
                 "path": path,
                 "path_type": project.path_type,
                 "files_searched": len(project.files),
+                "class_name": class_name,
                 "count": len(functions),
                 "functions": [f.to_dict() for f in functions],
             }
@@ -291,85 +301,81 @@ def get_function_definition(path: str, function_name: str) -> dict:
 
 
 @mcp.tool
-def get_function_variables(path: str, function_name: str) -> dict:
+def get_function_variables(path: str, function_name: str, class_name: str | None = None) -> dict:
     """Get all variables declared within a specific function.
 
     Args:
         path: File path, glob pattern (e.g., **/*.py), or directory path
         function_name: Name of the function to analyze
+        class_name: Optional class name to filter methods (if None, returns all matches)
     """
     try:
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
-            variables = analyzer.get_function_variables(function_name)
+            variables = analyzer.get_function_variables(function_name, class_name)
             variables = sorted(variables, key=lambda v: v.location.start_line)
             return {
                 "path": path,
                 "path_type": "file",
                 "function": function_name,
+                "class_name": class_name,
                 "count": len(variables),
                 "variables": [v.to_dict() for v in variables],
             }
         else:
             project = ProjectAnalyzer(path)
-            for file_path in project.files:
-                analyzer = project._get_analyzer(file_path)
-                if analyzer:
-                    func = analyzer.get_function_by_name(function_name)
-                    if func:
-                        variables = analyzer.get_function_variables(function_name)
-                        variables = sorted(variables, key=lambda v: v.location.start_line)
-                        return {
-                            "path": path,
-                            "path_type": project.path_type,
-                            "file": file_path,
-                            "function": function_name,
-                            "count": len(variables),
-                            "variables": [v.to_dict() for v in variables],
-                        }
-            return {"error": f"Function '{function_name}' not found"}
+            variables = project.get_function_variables(function_name, class_name)
+            if not variables:
+                return {"error": f"Function '{function_name}' not found"}
+            return {
+                "path": path,
+                "path_type": project.path_type,
+                "files_searched": len(project.files),
+                "function": function_name,
+                "class_name": class_name,
+                "count": len(variables),
+                "variables": variables,
+            }
     except Exception as e:
         return {"error": str(e)}
 
 
 @mcp.tool
-def get_function_strings(path: str, function_name: str) -> dict:
+def get_function_strings(path: str, function_name: str, class_name: str | None = None) -> dict:
     """Get all string literals within a specific function.
 
     Args:
         path: File path, glob pattern (e.g., **/*.py), or directory path
         function_name: Name of the function to analyze
+        class_name: Optional class name to filter methods (if None, returns all matches)
     """
     try:
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
-            strings = analyzer.get_function_strings(function_name)
+            strings = analyzer.get_function_strings(function_name, class_name)
             strings = sorted(strings, key=lambda s: s.location.start_line)
             return {
                 "path": path,
                 "path_type": "file",
                 "function": function_name,
+                "class_name": class_name,
                 "count": len(strings),
                 "strings": [s.to_dict() for s in strings],
             }
         else:
             project = ProjectAnalyzer(path)
-            for file_path in project.files:
-                analyzer = project._get_analyzer(file_path)
-                if analyzer:
-                    func = analyzer.get_function_by_name(function_name)
-                    if func:
-                        strings = analyzer.get_function_strings(function_name)
-                        strings = sorted(strings, key=lambda s: s.location.start_line)
-                        return {
-                            "path": path,
-                            "path_type": project.path_type,
-                            "file": file_path,
-                            "function": function_name,
-                            "count": len(strings),
-                            "strings": [s.to_dict() for s in strings],
-                        }
-            return {"error": f"Function '{function_name}' not found"}
+            strings = project.get_function_strings(function_name, class_name)
+            if not strings:
+                return {"error": f"Function '{function_name}' not found"}
+            return {
+                "path": path,
+                "path_type": project.path_type,
+                "files_searched": len(project.files),
+                "function": function_name,
+                "class_name": class_name,
+                "count": len(strings),
+                "strings": strings,
+            }
     except Exception as e:
         return {"error": str(e)}
 

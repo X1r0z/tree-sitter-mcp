@@ -71,9 +71,9 @@ class ClassInfo:
 
 @dataclass
 class CallInfo:
-    caller: str | None = None
     callee: str
     location: Location
+    caller: str | None = None
     object_name: str | None = None
     is_method_call: bool = False
 
@@ -218,6 +218,37 @@ class CodeAnalyzer:
             current = current.parent
         return None
 
+    def _find_enclosing_class(self, node: tree_sitter.Node) -> str | None:
+        """Find the name of the class that encloses this node."""
+        if node.type == "method_declaration":
+            for child in node.children:
+                if child.type == "parameter_list":
+                    for param in child.children:
+                        if param.type == "parameter_declaration":
+                            for p in param.children:
+                                if p.type == "pointer_type":
+                                    for pt in p.children:
+                                        if pt.type == "type_identifier":
+                                            return self._node_text(pt)
+                                if p.type == "type_identifier":
+                                    return self._node_text(p)
+                    break
+
+        class_types = {
+            "class_definition",
+            "class_declaration",
+            "class_body",
+            "interface_declaration",
+        }
+        current = node.parent
+        while current:
+            if current.type in class_types:
+                for child in current.children:
+                    if child.type in ("identifier", "type_identifier", "name"):
+                        return self._node_text(child)
+            current = current.parent
+        return None
+
     def get_functions(self) -> list[FunctionInfo]:
         if not self._language:
             return []
@@ -241,41 +272,67 @@ class CodeAnalyzer:
                     name = self._node_text(name_node)
                     break
             if name:
+                class_name = self._find_enclosing_class(func_node)
                 functions.append(
                     FunctionInfo(
                         name=name,
                         location=self._node_location(func_node),
                         body=self._node_text(func_node),
                         node=func_node,
+                        is_method=class_name is not None,
+                        class_name=class_name,
                     )
                 )
 
         return functions
 
-    def get_function_by_name(self, name: str) -> FunctionInfo | None:
-        """Get a specific function by name."""
+    def get_function_by_name(self, name: str, class_name: str | None = None) -> FunctionInfo | None:
+        """Get a specific function by name, optionally filtering by class_name."""
         for func in self.get_functions():
-            if func.name == name:
+            if func.name == name and (class_name is None or func.class_name == class_name):
                 return func
         return None
 
-    def get_function_variables(self, function_name: str) -> list[VariableInfo]:
+    def get_all_functions_by_name(
+        self, name: str, class_name: str | None = None
+    ) -> list[FunctionInfo]:
+        """Get all functions with a given name, optionally filtering by class_name."""
+        results = []
+        for func in self.get_functions():
+            if func.name == name and (class_name is None or func.class_name == class_name):
+                results.append(func)
+        return results
+
+    def get_function_variables(
+        self, function_name: str, class_name: str | None = None
+    ) -> list[VariableInfo]:
         """Get all variables declared within a specific function."""
+        funcs = self.get_all_functions_by_name(function_name, class_name)
         all_vars = self.get_variables()
-        return [v for v in all_vars if v.scope == function_name]
+        results = []
+        for func in funcs:
+            results.extend(
+                v
+                for v in all_vars
+                if func.location.start_line <= v.location.start_line <= func.location.end_line
+            )
+        return results
 
-    def get_function_strings(self, function_name: str) -> list[StringLiteral]:
+    def get_function_strings(
+        self, function_name: str, class_name: str | None = None
+    ) -> list[StringLiteral]:
         """Get all string literals within a specific function."""
-        func = self.get_function_by_name(function_name)
-        if not func or not func.node:
-            return []
-
+        funcs = self.get_all_functions_by_name(function_name, class_name)
         all_strings = self.get_strings()
-        return [
-            s
-            for s in all_strings
-            if (func.location.start_line <= s.location.start_line <= func.location.end_line)
-        ]
+        results = []
+        for func in funcs:
+            if func.node:
+                results.extend(
+                    s
+                    for s in all_strings
+                    if func.location.start_line <= s.location.start_line <= func.location.end_line
+                )
+        return results
 
     def get_function_body(self, function_name: str) -> str | None:
         """Get the source code body of a specific function."""
@@ -284,29 +341,48 @@ class CodeAnalyzer:
             return func.body
         return None
 
-    def get_function_callees(self, function_name: str) -> list[dict]:
+    def get_function_callees(self, function_name: str, class_name: str | None = None) -> list[dict]:
         """Get all functions/methods called by a specific function."""
-        calls = [c for c in self.get_calls() if c.caller == function_name]
+        funcs = self.get_all_functions_by_name(function_name, class_name)
+        all_calls = self.get_calls()
         callees: list[dict] = []
-        for call in calls:
-            callee = call.callee
-            if call.object_name:
-                callee = f"{call.object_name}.{callee}"
-            entry = {"callee": callee, "line": call.location.start_line}
-            if not any(e["callee"] == callee for e in callees):
-                callees.append(entry)
+        for func in funcs:
+            for call in all_calls:
+                if func.location.start_line <= call.location.start_line <= func.location.end_line:
+                    callee = call.callee
+                    if call.object_name:
+                        callee = f"{call.object_name}.{callee}"
+                    entry = {
+                        "callee": callee,
+                        "line": call.location.start_line,
+                        "class_name": func.class_name,
+                    }
+                    if not any(
+                        e["callee"] == callee and e["class_name"] == func.class_name
+                        for e in callees
+                    ):
+                        callees.append(entry)
         return callees
 
-    def get_function_callers(self, function_name: str) -> list[dict]:
+    def get_function_callers(self, function_name: str, class_name: str | None = None) -> list[dict]:
         """Get all functions that call a specific function."""
+        funcs = self.get_all_functions_by_name(function_name, class_name)
         all_calls = self.get_calls()
         callers: list[dict] = []
-        for call in all_calls:
-            caller = call.caller or "<module>"
-            if call.callee == function_name:
-                entry = {"caller": caller, "line": call.location.start_line}
-                if not any(e["caller"] == caller for e in callers):
-                    callers.append(entry)
+        for func in funcs:
+            for call in all_calls:
+                caller = call.caller or "<module>"
+                if call.callee == function_name:
+                    entry = {
+                        "caller": caller,
+                        "line": call.location.start_line,
+                        "target_class": func.class_name,
+                    }
+                    if not any(
+                        e["caller"] == caller and e["target_class"] == func.class_name
+                        for e in callers
+                    ):
+                        callers.append(entry)
         return callers
 
     def get_classes(self) -> list[ClassInfo]:

@@ -146,25 +146,26 @@ class ProjectAnalyzer:
                 variables.extend(analyzer.get_variables())
         return variables
 
-    def get_function_by_name(self, name: str) -> FunctionInfo | None:
-        """Find a function by name across all files."""
+    def get_function_by_name(self, name: str, class_name: str | None = None) -> FunctionInfo | None:
+        """Find a function by name across all files, optionally filtering by class_name."""
         for file_path in self.files:
             analyzer = self._get_analyzer(file_path)
             if analyzer:
-                func = analyzer.get_function_by_name(name)
+                func = analyzer.get_function_by_name(name, class_name)
                 if func:
                     return func
         return None
 
-    def get_all_functions_by_name(self, name: str) -> list[FunctionInfo]:
-        """Find all functions with a given name across all files."""
+    def get_all_functions_by_name(
+        self, name: str, class_name: str | None = None
+    ) -> list[FunctionInfo]:
+        """Find all functions with a given name across all files, optionally filtering by class_name."""
         functions = []
         for file_path in self.files:
             analyzer = self._get_analyzer(file_path)
             if analyzer:
-                func = analyzer.get_function_by_name(name)
-                if func:
-                    functions.append(func)
+                funcs = analyzer.get_all_functions_by_name(name, class_name)
+                functions.extend(funcs)
         return functions
 
     def get_reverse_call_graph(self) -> dict[str, list[str]]:
@@ -182,37 +183,79 @@ class ProjectAnalyzer:
                             graph[callee].append(caller)
         return graph
 
-    def get_callers(self, function_name: str) -> list[dict]:
+    def get_callers(self, function_name: str, class_name: str | None = None) -> list[dict]:
         """Find all callers of a function across all files."""
         callers = []
         for file_path in self.files:
             analyzer = self._get_analyzer(file_path)
             if analyzer:
-                file_callers = analyzer.get_function_callers(function_name)
+                file_callers = analyzer.get_function_callers(function_name, class_name)
                 for caller_info in file_callers:
                     callers.append(
                         {
                             "caller": caller_info["caller"],
                             "line": caller_info["line"],
                             "file": file_path,
+                            "target_class": caller_info.get("target_class"),
                         }
                     )
         return sorted(callers, key=lambda x: (x["file"], x["line"]))
 
-    def get_callees(self, function_name: str) -> list[dict]:
+    def get_callees(self, function_name: str, class_name: str | None = None) -> list[dict]:
         """Find all functions called by a function across all files."""
+        results = []
         for file_path in self.files:
             analyzer = self._get_analyzer(file_path)
             if analyzer:
-                func = analyzer.get_function_by_name(function_name)
-                if func:
-                    callees = analyzer.get_function_callees(function_name)
-                    result = [
-                        {"callee": c["callee"], "line": c["line"], "file": file_path}
-                        for c in callees
-                    ]
-                    return sorted(result, key=lambda x: x["line"])
-        return []
+                funcs = analyzer.get_all_functions_by_name(function_name, class_name)
+                if funcs:
+                    callees = analyzer.get_function_callees(function_name, class_name)
+                    for c in callees:
+                        results.append(
+                            {
+                                "callee": c["callee"],
+                                "line": c["line"],
+                                "file": file_path,
+                                "class_name": c.get("class_name"),
+                            }
+                        )
+        return sorted(results, key=lambda x: (x["file"], x["line"]))
+
+    def get_function_variables(
+        self, function_name: str, class_name: str | None = None
+    ) -> list[dict]:
+        """Get all variables in a function across all files."""
+        results = []
+        for file_path in self.files:
+            analyzer = self._get_analyzer(file_path)
+            if analyzer:
+                variables = analyzer.get_function_variables(function_name, class_name)
+                for v in variables:
+                    results.append(
+                        {
+                            "name": v.name,
+                            "line": v.location.start_line,
+                            "file": file_path,
+                        }
+                    )
+        return sorted(results, key=lambda x: (x["file"], x["line"]))
+
+    def get_function_strings(self, function_name: str, class_name: str | None = None) -> list[dict]:
+        """Get all strings in a function across all files."""
+        results = []
+        for file_path in self.files:
+            analyzer = self._get_analyzer(file_path)
+            if analyzer:
+                strings = analyzer.get_function_strings(function_name, class_name)
+                for s in strings:
+                    results.append(
+                        {
+                            "value": s.value,
+                            "line": s.location.start_line,
+                            "file": file_path,
+                        }
+                    )
+        return sorted(results, key=lambda x: (x["file"], x["line"]))
 
     def find_symbols(self, name: str) -> list[dict]:
         """Find all references to an identifier across all files."""
