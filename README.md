@@ -77,8 +77,6 @@ Or run the server using `uv` from the source directory:
 
 | Tool | Description |
 |------|-------------|
-| `get_call_graph` | Get the complete call graph (function → callees) |
-| `get_function_calls` | Extract all function/method calls |
 | `get_callers` | Find functions that call a specific function |
 | `get_callees` | Find functions called by a specific function |
 
@@ -94,7 +92,7 @@ Or run the server using `uv` from the source directory:
 
 | Tool | Description |
 |------|-------------|
-| `find_references` | Find all references to a specific symbol |
+| `find_symbols` | Find all references to a specific symbol |
 
 ## Path Types
 

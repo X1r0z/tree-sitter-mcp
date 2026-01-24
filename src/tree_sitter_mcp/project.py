@@ -167,21 +167,6 @@ class ProjectAnalyzer:
                     functions.append(func)
         return functions
 
-    def get_call_graph(self) -> dict[str, list[str]]:
-        """Get combined call graph from all files."""
-        graph: dict[str, list[str]] = {}
-        for file_path in self.files:
-            analyzer = self._get_analyzer(file_path)
-            if analyzer:
-                file_graph = analyzer.get_call_graph()
-                for caller, callees in file_graph.items():
-                    if caller not in graph:
-                        graph[caller] = []
-                    for callee in callees:
-                        if callee not in graph[caller]:
-                            graph[caller].append(callee)
-        return graph
-
     def get_reverse_call_graph(self) -> dict[str, list[str]]:
         """Get combined reverse call graph from all files."""
         graph: dict[str, list[str]] = {}
@@ -229,12 +214,12 @@ class ProjectAnalyzer:
                     return sorted(result, key=lambda x: x["line"])
         return []
 
-    def find_references(self, name: str) -> list[dict]:
+    def find_symbols(self, name: str) -> list[dict]:
         """Find all references to an identifier across all files."""
         refs = []
         for file_path in self.files:
             analyzer = self._get_analyzer(file_path)
             if analyzer:
-                file_refs = analyzer.find_references(name)
+                file_refs = analyzer.find_symbols(name)
                 refs.extend(file_refs)
         return refs

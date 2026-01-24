@@ -14,17 +14,13 @@ from .languages import detect_language, get_language, get_language_info, get_par
 class Location:
     file: str
     start_line: int
-    start_column: int
     end_line: int
-    end_column: int
 
     def to_dict(self) -> dict:
         return {
             "file": self.file,
             "start_line": self.start_line,
-            "start_column": self.start_column,
             "end_line": self.end_line,
-            "end_column": self.end_column,
         }
 
 
@@ -75,17 +71,17 @@ class ClassInfo:
 
 @dataclass
 class CallInfo:
+    caller: str | None = None
     callee: str
     location: Location
     object_name: str | None = None
     is_method_call: bool = False
-    caller_function: str | None = None
 
     def to_dict(self, include_file: bool = True) -> dict:
         result = {
+            "caller": self.caller,
             "callee": self.callee,
             "line": self.location.start_line,
-            "caller_function": self.caller_function,
         }
         if include_file:
             result["file"] = self.location.file
@@ -178,9 +174,7 @@ class CodeAnalyzer:
         return Location(
             file=self.file_path or "<string>",
             start_line=node.start_point.row + 1,
-            start_column=node.start_point.column,
             end_line=node.end_point.row + 1,
-            end_column=node.end_point.column,
         )
 
     def _node_text(self, node: tree_sitter.Node) -> str:
@@ -292,7 +286,7 @@ class CodeAnalyzer:
 
     def get_function_callees(self, function_name: str) -> list[dict]:
         """Get all functions/methods called by a specific function."""
-        calls = [c for c in self.get_calls() if c.caller_function == function_name]
+        calls = [c for c in self.get_calls() if c.caller == function_name]
         callees: list[dict] = []
         for call in calls:
             callee = call.callee
@@ -308,7 +302,7 @@ class CodeAnalyzer:
         all_calls = self.get_calls()
         callers: list[dict] = []
         for call in all_calls:
-            caller = call.caller_function or "<module>"
+            caller = call.caller or "<module>"
             if call.callee == function_name:
                 entry = {"caller": caller, "line": call.location.start_line}
                 if not any(e["caller"] == caller for e in callers):
@@ -425,7 +419,7 @@ class CodeAnalyzer:
                     CallInfo(
                         callee=callee,
                         location=self._node_location(call_node),
-                        caller_function=caller,
+                        caller=caller,
                         is_method_call=is_method,
                         object_name=obj_name,
                     )
@@ -499,7 +493,7 @@ class CodeAnalyzer:
 
         return strings
 
-    def find_references(self, name: str) -> list[dict]:
+    def find_symbols(self, name: str) -> list[dict]:
         if not self._tree or not self._source:
             return []
 
@@ -520,29 +514,12 @@ class CodeAnalyzer:
         walk(self._tree.root_node)
         return refs
 
-    def get_call_graph(self) -> dict[str, list[dict]]:
-        calls = self.get_calls()
-        graph: dict[str, list[dict]] = {}
-
-        for call in calls:
-            caller = call.caller_function or "<module>"
-            if caller not in graph:
-                graph[caller] = []
-            callee = call.callee
-            if call.object_name:
-                callee = f"{call.object_name}.{callee}"
-            entry = {"callee": callee, "line": call.location.start_line}
-            if not any(e["callee"] == callee for e in graph[caller]):
-                graph[caller].append(entry)
-
-        return graph
-
     def get_reverse_call_graph(self) -> dict[str, list[dict]]:
         calls = self.get_calls()
         graph: dict[str, list[dict]] = {}
 
         for call in calls:
-            caller = call.caller_function or "<module>"
+            caller = call.caller or "<module>"
             callee = call.callee
             if callee not in graph:
                 graph[callee] = []

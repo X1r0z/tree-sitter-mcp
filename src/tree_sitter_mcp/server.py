@@ -92,38 +92,6 @@ def get_classes(path: str) -> dict:
 
 
 @mcp.tool
-def get_function_calls(path: str) -> dict:
-    """Extract all function/method calls.
-
-    Args:
-        path: File path, glob pattern (e.g., **/*.py), or directory path
-    """
-    try:
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            calls = analyzer.get_calls()
-            return {
-                "path": path,
-                "path_type": "file",
-                "language": analyzer._language,
-                "count": len(calls),
-                "calls": [c.to_dict(include_file=False) for c in calls],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            calls = project.get_calls()
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "count": len(calls),
-                "calls": [c.to_dict(include_file=True) for c in calls],
-            }
-    except Exception as e:
-        return {"error": str(e)}
-
-
-@mcp.tool
 def get_imports(path: str) -> dict:
     """Extract all import statements.
 
@@ -182,34 +150,6 @@ def get_variables(path: str) -> dict:
                 "files_searched": len(project.files),
                 "count": len(variables),
                 "variables": [v.to_dict(include_file=True) for v in variables],
-            }
-    except Exception as e:
-        return {"error": str(e)}
-
-
-@mcp.tool
-def get_call_graph(path: str) -> dict:
-    """Get call graph: which functions call which other functions.
-
-    Args:
-        path: File path, glob pattern (e.g., **/*.py), or directory path
-    """
-    try:
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            return {
-                "path": path,
-                "path_type": "file",
-                "language": analyzer._language,
-                "call_graph": analyzer.get_call_graph(),
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "call_graph": project.get_call_graph(),
             }
     except Exception as e:
         return {"error": str(e)}
@@ -282,7 +222,7 @@ def get_callees(path: str, function_name: str) -> dict:
 
 
 @mcp.tool
-def find_references(path: str, name: str) -> dict:
+def find_symbols(path: str, name: str) -> dict:
     """Find all references to a specific identifier.
 
     Args:
@@ -292,7 +232,7 @@ def find_references(path: str, name: str) -> dict:
     try:
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
-            refs = analyzer.find_references(name)
+            refs = analyzer.find_symbols(name)
             return {
                 "path": path,
                 "path_type": "file",
@@ -302,7 +242,7 @@ def find_references(path: str, name: str) -> dict:
             }
         else:
             project = ProjectAnalyzer(path)
-            refs = project.find_references(name)
+            refs = project.find_symbols(name)
             return {
                 "path": path,
                 "path_type": project.path_type,
