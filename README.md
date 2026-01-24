@@ -87,11 +87,8 @@ Or run the server using `uv` from the source directory:
 | Tool | Description |
 |------|-------------|
 | `get_function_definition` | Get the complete source code of a function |
-| `get_function_calls_in_function` | Get all calls made within a function |
 | `get_function_variables` | Get all variables declared in a function |
 | `get_function_strings` | Get all string literals in a function |
-| `get_function_callees` | Get functions called by a specific function |
-| `get_function_callers` | Get functions that call a specific function |
 
 ### Symbol Reference Tracking
 

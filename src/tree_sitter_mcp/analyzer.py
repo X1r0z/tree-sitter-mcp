@@ -265,15 +265,6 @@ class CodeAnalyzer:
                 return func
         return None
 
-    def get_function_calls_in_function(self, function_name: str) -> list[CallInfo]:
-        """Get all calls made within a specific function."""
-        func = self.get_function_by_name(function_name)
-        if not func or not func.node:
-            return []
-
-        all_calls = self.get_calls()
-        return [c for c in all_calls if c.caller_function == function_name]
-
     def get_function_variables(self, function_name: str) -> list[VariableInfo]:
         """Get all variables declared within a specific function."""
         all_vars = self.get_variables()
@@ -301,7 +292,7 @@ class CodeAnalyzer:
 
     def get_function_callees(self, function_name: str) -> list[str]:
         """Get all functions/methods called by a specific function."""
-        calls = self.get_function_calls_in_function(function_name)
+        calls = [c for c in self.get_calls() if c.caller_function == function_name]
         callees = []
         for call in calls:
             callee = call.callee
@@ -316,12 +307,9 @@ class CodeAnalyzer:
         all_calls = self.get_calls()
         callers = []
         for call in all_calls:
-            if (
-                call.callee == function_name
-                and call.caller_function
-                and call.caller_function not in callers
-            ):
-                callers.append(call.caller_function)
+            caller = call.caller_function or "<module>"
+            if call.callee == function_name and caller not in callers:
+                callers.append(caller)
         return callers
 
     def get_classes(self) -> list[ClassInfo]:
