@@ -1,0 +1,120 @@
+"""Language support and parser management for tree-sitter."""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
+
+import tree_sitter
+import tree_sitter_go
+import tree_sitter_java
+import tree_sitter_javascript
+import tree_sitter_python
+
+LANGUAGE_MODULES: dict[str, Callable[[], tree_sitter.Language]] = {
+    "python": lambda: tree_sitter.Language(tree_sitter_python.language()),
+    "javascript": lambda: tree_sitter.Language(tree_sitter_javascript.language()),
+    "java": lambda: tree_sitter.Language(tree_sitter_java.language()),
+    "go": lambda: tree_sitter.Language(tree_sitter_go.language()),
+}
+
+FILE_EXTENSION_MAP: dict[str, str] = {
+    ".py": "python",
+    ".pyw": "python",
+    ".pyi": "python",
+    ".js": "javascript",
+    ".mjs": "javascript",
+    ".cjs": "javascript",
+    ".jsx": "javascript",
+    ".ts": "javascript",
+    ".tsx": "javascript",
+    ".java": "java",
+    ".go": "go",
+}
+
+
+@dataclass
+class LanguageInfo:
+    name: str
+    extensions: list[str]
+    function_query: str
+    class_query: str
+    call_query: str
+    import_query: str
+    variable_query: str
+    string_query: str
+
+
+LANGUAGE_QUERIES: dict[str, LanguageInfo] = {
+    "python": LanguageInfo(
+        name="python",
+        extensions=[".py", ".pyw", ".pyi"],
+        function_query="(function_definition name: (identifier) @name) @function",
+        class_query="(class_definition name: (identifier) @name) @class",
+        call_query="[(call function: (identifier) @callee) (call function: (attribute object: (_) @object attribute: (identifier) @method))] @call",
+        import_query="[(import_statement name: (dotted_name) @module) (import_from_statement module_name: (dotted_name) @module)] @import",
+        variable_query="(assignment left: (identifier) @name) @assignment",
+        string_query="(string) @string",
+    ),
+    "javascript": LanguageInfo(
+        name="javascript",
+        extensions=[".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx"],
+        function_query="[(function_declaration name: (identifier) @name) (method_definition name: (property_identifier) @name)] @function",
+        class_query="(class_declaration name: (identifier) @name) @class",
+        call_query="[(call_expression function: (identifier) @callee) (call_expression function: (member_expression object: (_) @object property: (property_identifier) @method))] @call",
+        import_query="(import_statement source: (string) @module) @import",
+        variable_query="[(variable_declarator name: (identifier) @name) (assignment_expression left: (identifier) @name)] @declaration",
+        string_query="[(string) (template_string)] @string",
+    ),
+    "java": LanguageInfo(
+        name="java",
+        extensions=[".java"],
+        function_query="[(method_declaration name: (identifier) @name) (constructor_declaration name: (identifier) @name)] @function",
+        class_query="[(class_declaration name: (identifier) @name) (interface_declaration name: (identifier) @name)] @class",
+        call_query="(method_invocation name: (identifier) @callee) @call",
+        import_query="(import_declaration (scoped_identifier) @module) @import",
+        variable_query="(variable_declarator name: (identifier) @name) @declaration",
+        string_query="(string_literal) @string",
+    ),
+    "go": LanguageInfo(
+        name="go",
+        extensions=[".go"],
+        function_query="[(function_declaration name: (identifier) @name) (method_declaration name: (field_identifier) @name)] @function",
+        class_query="(type_declaration (type_spec name: (type_identifier) @name type: [(struct_type) (interface_type)])) @class",
+        call_query="[(call_expression function: (identifier) @callee) (call_expression function: (selector_expression operand: (_) @object field: (field_identifier) @method))] @call",
+        import_query="(import_spec path: (interpreted_string_literal) @module) @import",
+        variable_query="[(short_var_declaration left: (expression_list (identifier) @name)) (var_spec name: (identifier) @name)] @declaration",
+        string_query="[(interpreted_string_literal) (raw_string_literal)] @string",
+    ),
+}
+
+
+def detect_language(file_path: str | Path) -> str | None:
+    ext = Path(file_path).suffix.lower()
+    return FILE_EXTENSION_MAP.get(ext)
+
+
+@lru_cache(maxsize=16)
+def get_language(language: str) -> tree_sitter.Language | None:
+    if language not in LANGUAGE_MODULES:
+        return None
+    return LANGUAGE_MODULES[language]()
+
+
+def get_parser(language: str) -> tree_sitter.Parser | None:
+    lang = get_language(language)
+    if not lang:
+        return None
+    parser = tree_sitter.Parser()
+    parser.language = lang
+    return parser
+
+
+def get_language_info(language: str) -> LanguageInfo | None:
+    return LANGUAGE_QUERIES.get(language)
+
+
+def get_supported_languages() -> list[str]:
+    return list(LANGUAGE_MODULES.keys())
