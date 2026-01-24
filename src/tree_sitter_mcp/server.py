@@ -28,16 +28,19 @@ def _is_single_file(path: str) -> bool:
 
 
 @mcp.tool
-def get_functions(path: str) -> dict:
+def get_functions(path: str, query: str = "") -> dict:
     """Extract all function/method definitions.
 
     Args:
         path: File path, glob pattern (e.g., **/*.py), or directory path
+        query: Optional filter string for fuzzy matching function/method names (contains match)
     """
     try:
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             functions = analyzer.get_functions()
+            if query:
+                functions = [f for f in functions if query in f.name]
             return {
                 "path": path,
                 "path_type": "file",
@@ -48,6 +51,8 @@ def get_functions(path: str) -> dict:
         else:
             project = ProjectAnalyzer(path)
             functions = project.get_functions()
+            if query:
+                functions = [f for f in functions if query in f.name]
             return {
                 "path": path,
                 "path_type": project.path_type,
@@ -60,16 +65,19 @@ def get_functions(path: str) -> dict:
 
 
 @mcp.tool
-def get_classes(path: str) -> dict:
+def get_classes(path: str, query: str = "") -> dict:
     """Extract all class/struct/interface definitions.
 
     Args:
         path: File path, glob pattern (e.g., **/*.py), or directory path
+        query: Optional filter string for fuzzy matching class names (contains match)
     """
     try:
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             classes = analyzer.get_classes()
+            if query:
+                classes = [c for c in classes if query in c.name]
             return {
                 "path": path,
                 "path_type": "file",
@@ -80,6 +88,8 @@ def get_classes(path: str) -> dict:
         else:
             project = ProjectAnalyzer(path)
             classes = project.get_classes()
+            if query:
+                classes = [c for c in classes if query in c.name]
             return {
                 "path": path,
                 "path_type": project.path_type,
@@ -92,16 +102,19 @@ def get_classes(path: str) -> dict:
 
 
 @mcp.tool
-def get_imports(path: str) -> dict:
+def get_imports(path: str, query: str = "") -> dict:
     """Extract all import statements.
 
     Args:
         path: File path, glob pattern (e.g., **/*.py), or directory path
+        query: Optional filter string for fuzzy matching module names (contains match)
     """
     try:
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             imports = analyzer.get_imports()
+            if query:
+                imports = [i for i in imports if query in i.module]
             return {
                 "path": path,
                 "path_type": "file",
@@ -112,6 +125,8 @@ def get_imports(path: str) -> dict:
         else:
             project = ProjectAnalyzer(path)
             imports = project.get_imports()
+            if query:
+                imports = [i for i in imports if query in i.module]
             return {
                 "path": path,
                 "path_type": project.path_type,
@@ -124,16 +139,19 @@ def get_imports(path: str) -> dict:
 
 
 @mcp.tool
-def get_variables(path: str) -> dict:
+def get_variables(path: str, query: str = "") -> dict:
     """Extract all variable declarations.
 
     Args:
         path: File path, glob pattern (e.g., **/*.py), or directory path
+        query: Optional filter string for fuzzy matching variable names (contains match)
     """
     try:
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             variables = analyzer.get_variables()
+            if query:
+                variables = [v for v in variables if query in v.name]
             return {
                 "path": path,
                 "path_type": "file",
@@ -144,6 +162,8 @@ def get_variables(path: str) -> dict:
         else:
             project = ProjectAnalyzer(path)
             variables = project.get_variables()
+            if query:
+                variables = [v for v in variables if query in v.name]
             return {
                 "path": path,
                 "path_type": project.path_type,
