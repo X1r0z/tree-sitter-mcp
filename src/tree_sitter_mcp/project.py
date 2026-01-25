@@ -9,6 +9,7 @@ from .analyzer import (
     CallInfo,
     ClassInfo,
     CodeAnalyzer,
+    FieldInfo,
     FunctionInfo,
     ImportInfo,
     VariableInfo,
@@ -118,6 +119,15 @@ class ProjectAnalyzer:
             if analyzer:
                 classes.extend(analyzer.get_classes())
         return classes
+
+    def get_fields(self, class_name: str | None = None) -> list[FieldInfo]:
+        """Get all fields from all files, optionally filtered by class name."""
+        fields = []
+        for file_path in self.files:
+            analyzer = self._get_analyzer(file_path)
+            if analyzer:
+                fields.extend(analyzer.get_fields(class_name))
+        return fields
 
     def get_calls(self) -> list[CallInfo]:
         """Get all function calls from all files."""

@@ -102,6 +102,41 @@ def get_classes(path: str, query: str = "") -> dict:
 
 
 @mcp.tool
+def get_fields(path: str, class_name: str) -> dict:
+    """Get all fields of a specific class.
+
+    Args:
+        path: File path, glob pattern (e.g., **/*.py), or directory path
+        class_name: Name of the class to get fields for
+    """
+    try:
+        if _is_single_file(path):
+            analyzer = CodeAnalyzer(path)
+            fields = analyzer.get_fields(class_name)
+            return {
+                "path": path,
+                "path_type": "file",
+                "language": analyzer._language,
+                "class_name": class_name,
+                "count": len(fields),
+                "fields": [f.to_dict(include_file=False) for f in fields],
+            }
+        else:
+            project = ProjectAnalyzer(path)
+            fields = project.get_fields(class_name)
+            return {
+                "path": path,
+                "path_type": project.path_type,
+                "files_searched": len(project.files),
+                "class_name": class_name,
+                "count": len(fields),
+                "fields": [f.to_dict(include_file=True) for f in fields],
+            }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool
 def get_imports(path: str, query: str = "") -> dict:
     """Extract all import statements.
 

@@ -8,7 +8,7 @@
 
 ## Architecture
 - `src/tree_sitter_mcp/server.py` - FastMCP server with tool definitions (@mcp.tool decorators)
-- `src/tree_sitter_mcp/analyzer.py` - CodeAnalyzer class: AST parsing, function/class extraction, call graphs
+- `src/tree_sitter_mcp/analyzer.py` - CodeAnalyzer class: AST parsing, function/class/field extraction, call graphs
 - `src/tree_sitter_mcp/languages.py` - Language support: parsers, queries, extension mapping
 - `src/tree_sitter_mcp/project.py` - ProjectAnalyzer class: multi-file/directory/glob analysis
 - Supported languages: Python, JavaScript/TypeScript, Java, Go

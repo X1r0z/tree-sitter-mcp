@@ -45,6 +45,7 @@ class LanguageInfo:
     import_query: str
     variable_query: str
     string_query: str
+    field_query: str
 
 
 LANGUAGE_QUERIES: dict[str, LanguageInfo] = {
@@ -57,6 +58,7 @@ LANGUAGE_QUERIES: dict[str, LanguageInfo] = {
         import_query="[(import_statement name: (dotted_name) @module) (import_from_statement module_name: (dotted_name) @module)] @import",
         variable_query="(assignment left: (identifier) @name) @assignment",
         string_query="(string) @string",
+        field_query="(class_definition body: (block (expression_statement (assignment left: (identifier) @name type: (type)? @type)))) @class",
     ),
     "javascript": LanguageInfo(
         name="javascript",
@@ -67,6 +69,7 @@ LANGUAGE_QUERIES: dict[str, LanguageInfo] = {
         import_query="(import_statement source: (string) @module) @import",
         variable_query="[(variable_declarator name: (identifier) @name) (assignment_expression left: (identifier) @name)] @declaration",
         string_query="[(string) (template_string)] @string",
+        field_query="(class_body (field_definition property: (property_identifier) @name type: (type_annotation)? @type)) @field",
     ),
     "java": LanguageInfo(
         name="java",
@@ -77,6 +80,7 @@ LANGUAGE_QUERIES: dict[str, LanguageInfo] = {
         import_query="(import_declaration (scoped_identifier) @module) @import",
         variable_query="(variable_declarator name: (identifier) @name) @declaration",
         string_query="(string_literal) @string",
+        field_query="(field_declaration type: (_) @type declarator: (variable_declarator name: (identifier) @name)) @field",
     ),
     "go": LanguageInfo(
         name="go",
@@ -87,6 +91,7 @@ LANGUAGE_QUERIES: dict[str, LanguageInfo] = {
         import_query="(import_spec path: (interpreted_string_literal) @module) @import",
         variable_query="[(short_var_declaration left: (expression_list (identifier) @name)) (var_spec name: (identifier) @name)] @declaration",
         string_query="[(interpreted_string_literal) (raw_string_literal)] @string",
+        field_query="(field_declaration_list (field_declaration name: (field_identifier) @name type: (_) @type)) @field",
     ),
 }
 

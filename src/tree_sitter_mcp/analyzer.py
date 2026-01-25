@@ -56,6 +56,7 @@ class ClassInfo:
     name: str
     location: Location
     methods: list[str] = field(default_factory=list)
+    fields: list[str] = field(default_factory=list)
 
     def to_dict(self, include_file: bool = True) -> dict:
         result = {
@@ -63,6 +64,7 @@ class ClassInfo:
             "start_line": self.location.start_line,
             "end_line": self.location.end_line,
             "methods": self.methods,
+            "fields": self.fields,
         }
         if include_file:
             result["file"] = self.location.file
@@ -136,6 +138,27 @@ class StringLiteral:
         }
         if include_file:
             result["file"] = self.location.file
+        return result
+
+
+@dataclass
+class FieldInfo:
+    name: str
+    location: Location
+    field_type: str | None = None
+    class_name: str | None = None
+
+    def to_dict(self, include_file: bool = True) -> dict:
+        result = {
+            "name": self.name,
+            "line": self.location.start_line,
+        }
+        if include_file:
+            result["file"] = self.location.file
+        if self.field_type:
+            result["type"] = self.field_type
+        if self.class_name:
+            result["class_name"] = self.class_name
         return result
 
 
@@ -409,11 +432,13 @@ class CodeAnalyzer:
                     break
             if name:
                 methods = self._extract_methods_from_class(class_node)
+                fields = self._extract_fields_from_class(class_node)
                 classes.append(
                     ClassInfo(
                         name=name,
                         location=self._node_location(class_node),
                         methods=methods,
+                        fields=fields,
                     )
                 )
 
@@ -444,6 +469,181 @@ class CodeAnalyzer:
 
         walk(class_node)
         return methods
+
+    def _extract_fields_from_class(self, class_node: tree_sitter.Node) -> list[str]:
+        """Extract field names from a class node."""
+        fields = []
+        field_types = {
+            "field_definition",
+            "field_declaration",
+        }
+        method_types = {
+            "function_definition",
+            "method_definition",
+            "method_declaration",
+            "constructor_declaration",
+        }
+
+        def walk(node: tree_sitter.Node):
+            if node.type in method_types:
+                return
+            if node.type in field_types:
+                for child in node.children:
+                    if child.type in ("identifier", "property_identifier", "field_identifier"):
+                        fields.append(self._node_text(child))
+                        break
+                    if child.type == "variable_declarator":
+                        for sub in child.children:
+                            if sub.type == "identifier":
+                                fields.append(self._node_text(sub))
+                                break
+                        break
+                return
+            if self._language == "python" and node.type == "expression_statement":
+                for child in node.children:
+                    if child.type == "assignment":
+                        for sub in child.children:
+                            if sub.type == "identifier":
+                                text = self._node_text(sub)
+                                if not text.startswith("self."):
+                                    fields.append(text)
+                                break
+                        break
+                return
+            for child in node.children:
+                walk(child)
+
+        walk(class_node)
+        return fields
+
+    def get_fields(self, class_name: str | None = None) -> list[FieldInfo]:
+        """Get all fields, optionally filtered by class name."""
+        if not self._language:
+            return []
+
+        lang_info = get_language_info(self._language)
+        if not lang_info:
+            return []
+
+        classes = self.get_classes()
+        fields: list[FieldInfo] = []
+
+        for cls in classes:
+            if class_name and cls.name != class_name:
+                continue
+            field_infos = self._get_fields_from_class_node(cls.name)
+            fields.extend(field_infos)
+
+        return fields
+
+    def _get_fields_from_class_node(self, class_name: str) -> list[FieldInfo]:
+        """Get detailed field info for a specific class."""
+        if not self._language or not self._tree:
+            return []
+
+        lang_info = get_language_info(self._language)
+        if not lang_info:
+            return []
+
+        captures = self._run_query(lang_info.class_query)
+        class_nodes = captures.get("class", [])
+        name_nodes = captures.get("name", [])
+
+        target_class_node = None
+        for class_node in class_nodes:
+            for name_node in name_nodes:
+                if (
+                    class_node.start_byte <= name_node.start_byte
+                    and name_node.end_byte <= class_node.end_byte
+                    and self._node_text(name_node) == class_name
+                ):
+                    target_class_node = class_node
+                    break
+            if target_class_node:
+                break
+
+        if not target_class_node:
+            return []
+
+        return self._extract_field_infos(target_class_node, class_name)
+
+    def _extract_field_infos(
+        self, class_node: tree_sitter.Node, class_name: str
+    ) -> list[FieldInfo]:
+        """Extract detailed field information from a class node."""
+        fields: list[FieldInfo] = []
+        field_types = {"field_definition", "field_declaration"}
+        method_types = {
+            "function_definition",
+            "method_definition",
+            "method_declaration",
+            "constructor_declaration",
+        }
+
+        def walk(node: tree_sitter.Node):
+            if node.type in method_types:
+                return
+            if node.type in field_types:
+                name = ""
+                field_type = None
+                for child in node.children:
+                    if child.type in ("identifier", "property_identifier", "field_identifier"):
+                        name = self._node_text(child)
+                    elif child.type == "variable_declarator":
+                        for sub in child.children:
+                            if sub.type == "identifier":
+                                name = self._node_text(sub)
+                                break
+                    elif child.type in (
+                        "type_annotation",
+                        "type",
+                        "type_identifier",
+                        "integral_type",
+                        "floating_point_type",
+                        "boolean_type",
+                        "generic_type",
+                        "array_type",
+                        "scoped_type_identifier",
+                    ):
+                        field_type = self._node_text(child)
+                if name:
+                    fields.append(
+                        FieldInfo(
+                            name=name,
+                            location=self._node_location(node),
+                            field_type=field_type,
+                            class_name=class_name,
+                        )
+                    )
+                return
+            if self._language == "python" and node.type == "expression_statement":
+                for child in node.children:
+                    if child.type == "assignment":
+                        name = ""
+                        field_type = None
+                        for sub in child.children:
+                            if sub.type == "identifier":
+                                text = self._node_text(sub)
+                                if not text.startswith("self."):
+                                    name = text
+                            elif sub.type == "type":
+                                field_type = self._node_text(sub)
+                        if name:
+                            fields.append(
+                                FieldInfo(
+                                    name=name,
+                                    location=self._node_location(child),
+                                    field_type=field_type,
+                                    class_name=class_name,
+                                )
+                            )
+                        break
+                return
+            for child in node.children:
+                walk(child)
+
+        walk(class_node)
+        return fields
 
     def get_calls(self) -> list[CallInfo]:
         if not self._language:

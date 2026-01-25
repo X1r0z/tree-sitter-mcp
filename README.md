@@ -4,7 +4,7 @@ A MCP server for code analysis using [tree-sitter](https://tree-sitter.github.io
 
 ## Features
 
-- **Function/Class Extraction** - Extract all function/method and class/struct/interface definitions
+- **Function/Class/Field Extraction** - Extract all function/method and class/struct/interface/field definitions
 - **Call Graph Analysis** - Build call graphs showing caller-callee relationships
 - **Symbol Reference Tracking** - Find all references to a specific symbol
 - **Import Analysis** - Extract import statements and dependencies
@@ -70,6 +70,7 @@ Or run the server using `uv` from the source directory:
 |------|-------------|
 | `get_functions` | Extract all function/method definitions |
 | `get_classes` | Extract all class/struct/interface definitions |
+| `get_fields` | Extract all field definitions |
 | `get_imports` | Extract all import statements |
 | `get_variables` | Extract all variable declarations |
 
