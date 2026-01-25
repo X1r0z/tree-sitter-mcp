@@ -178,21 +178,6 @@ class ProjectAnalyzer:
                 functions.extend(funcs)
         return functions
 
-    def get_reverse_call_graph(self) -> dict[str, list[str]]:
-        """Get combined reverse call graph from all files."""
-        graph: dict[str, list[str]] = {}
-        for file_path in self.files:
-            analyzer = self._get_analyzer(file_path)
-            if analyzer:
-                file_graph = analyzer.get_reverse_call_graph()
-                for callee, callers in file_graph.items():
-                    if callee not in graph:
-                        graph[callee] = []
-                    for caller in callers:
-                        if caller not in graph[callee]:
-                            graph[callee].append(caller)
-        return graph
-
     def get_callers(self, function_name: str, class_name: str | None = None) -> list[dict]:
         """Find all callers of a function across all files."""
         callers = []

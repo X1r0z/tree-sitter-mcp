@@ -859,21 +859,6 @@ class CodeAnalyzer:
         walk(self._tree.root_node)
         return refs
 
-    def get_reverse_call_graph(self) -> dict[str, list[dict]]:
-        calls = self.get_calls()
-        graph: dict[str, list[dict]] = {}
-
-        for call in calls:
-            caller = call.caller or "<module>"
-            callee = call.callee
-            if callee not in graph:
-                graph[callee] = []
-            entry = {"caller": caller, "line": call.location.start_line}
-            if not any(e["caller"] == caller for e in graph[callee]):
-                graph[callee].append(entry)
-
-        return graph
-
     def get_class_by_name(self, class_name: str) -> ClassInfo | None:
         """Get a specific class by name."""
         for cls in self.get_classes():
