@@ -18,7 +18,8 @@ A code analysis toolkit using [tree-sitter](https://tree-sitter.github.io/tree-s
 | Language | Extensions |
 |----------|------------|
 | Python | `.py`, `.pyw`, `.pyi` |
-| JavaScript/TypeScript | `.js`, `.mjs`, `.cjs`, `.jsx`, `.ts`, `.tsx` |
+| JavaScript | `.js`, `.mjs`, `.cjs`, `.jsx` |
+| TypeScript | `.ts`, `.tsx` |
 | Java | `.java` |
 | Go | `.go` |
 

@@ -33,7 +33,8 @@ All commands accept a `path` argument that supports:
 | Language | Extensions |
 |----------|------------|
 | Python | `.py`, `.pyw`, `.pyi` |
-| JavaScript/TypeScript | `.js`, `.mjs`, `.cjs`, `.jsx`, `.ts`, `.tsx` |
+| JavaScript | `.js`, `.mjs`, `.cjs`, `.jsx` |
+| TypeScript | `.ts`, `.tsx` |
 | Java | `.java` |
 | Go | `.go` |
 

@@ -463,9 +463,6 @@ def get_super_classes(path: str, class_name: str) -> dict:
     Args:
         path: File path, glob pattern (e.g., **/*.py), or directory path
         class_name: Name of the class to find parent classes for
-
-    Returns:
-        - super_classes: List of parent class definitions found in the analyzed scope
     """
     try:
         path = os.path.realpath(path)

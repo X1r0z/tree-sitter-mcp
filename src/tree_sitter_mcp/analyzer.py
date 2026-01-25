@@ -513,8 +513,120 @@ class CodeAnalyzer:
         walk(class_node)
         return methods
 
+    def _get_class_body_node(self, class_node: tree_sitter.Node) -> tree_sitter.Node | None:
+        body = class_node.child_by_field_name("body")
+        if body is not None:
+            return body
+        for child in class_node.children:
+            if child.type == "class_body":
+                return child
+        return None
+
+    def _clean_type_text(self, text: str) -> str:
+        stripped = text.strip()
+        if stripped.startswith(":"):
+            return stripped[1:].strip()
+        return stripped
+
+    def _extract_field_infos_js_like(
+        self, class_node: tree_sitter.Node, class_name: str
+    ) -> list[FieldInfo]:
+        body = self._get_class_body_node(class_node)
+        if body is None:
+            return []
+
+        fields: list[FieldInfo] = []
+        seen: set[str] = set()
+
+        def add_field(name: str, node: tree_sitter.Node, field_type: str | None):
+            if not name or name in seen:
+                return
+            seen.add(name)
+            fields.append(
+                FieldInfo(
+                    name=name,
+                    location=self._node_location(node),
+                    field_type=field_type,
+                    class_name=class_name,
+                )
+            )
+
+        for member in (c for c in body.children if c.is_named):
+            if member.type.endswith("field_definition") or member.type in {
+                "property_definition",
+                "field_definition",
+            }:
+                name_node = (
+                    member.child_by_field_name("name")
+                    or member.child_by_field_name("property")
+                    or member.child_by_field_name("pattern")
+                )
+                if name_node is None:
+                    continue
+
+                if name_node.type in {
+                    "identifier",
+                    "property_identifier",
+                    "private_property_identifier",
+                    "field_identifier",
+                }:
+                    name = self._node_text(name_node)
+                else:
+                    continue
+
+                type_node = member.child_by_field_name("type")
+                field_type = None
+                if type_node is not None:
+                    field_type = self._clean_type_text(self._node_text(type_node))
+
+                add_field(name, member, field_type)
+
+            if member.type == "method_definition":
+                name_node = member.child_by_field_name("name")
+                if name_node is None or self._node_text(name_node) != "constructor":
+                    continue
+
+                params = member.child_by_field_name("parameters")
+                if params is None:
+                    continue
+
+                for param in (c for c in params.children if c.is_named):
+                    has_param_property_modifier = any(
+                        c.type in {"accessibility_modifier", "readonly"} for c in param.children
+                    )
+                    if not has_param_property_modifier:
+                        continue
+
+                    pattern = param.child_by_field_name("pattern") or param.child_by_field_name(
+                        "name"
+                    )
+                    if pattern is None:
+                        continue
+
+                    if pattern.type == "assignment_pattern":
+                        pattern = pattern.child_by_field_name("left") or pattern
+
+                    if pattern.type not in {"identifier", "property_identifier"}:
+                        continue
+
+                    param_name = self._node_text(pattern)
+
+                    type_node = param.child_by_field_name("type")
+                    param_type = None
+                    if type_node is not None:
+                        param_type = self._clean_type_text(self._node_text(type_node))
+
+                    add_field(param_name, param, param_type)
+
+        return fields
+
     def _extract_fields_from_class(self, class_node: tree_sitter.Node) -> list[str]:
         """Extract field names from a class node."""
+        if self._language in {"javascript", "typescript", "tsx"}:
+            class_name_node = class_node.child_by_field_name("name")
+            class_name = self._node_text(class_name_node) if class_name_node else ""
+            return [f.name for f in self._extract_field_infos_js_like(class_node, class_name)]
+
         fields = []
         field_types = {
             "field_definition",
@@ -680,6 +792,9 @@ class CodeAnalyzer:
         self, class_node: tree_sitter.Node, class_name: str
     ) -> list[FieldInfo]:
         """Extract detailed field information from a class node."""
+        if self._language in {"javascript", "typescript", "tsx"}:
+            return self._extract_field_infos_js_like(class_node, class_name)
+
         fields: list[FieldInfo] = []
         field_types = {"field_definition", "field_declaration"}
         method_types = {

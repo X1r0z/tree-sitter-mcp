@@ -12,10 +12,13 @@ import tree_sitter_go
 import tree_sitter_java
 import tree_sitter_javascript
 import tree_sitter_python
+import tree_sitter_typescript
 
 LANGUAGE_MODULES: dict[str, Callable[[], tree_sitter.Language]] = {
     "python": lambda: tree_sitter.Language(tree_sitter_python.language()),
     "javascript": lambda: tree_sitter.Language(tree_sitter_javascript.language()),
+    "typescript": lambda: tree_sitter.Language(tree_sitter_typescript.language_typescript()),
+    "tsx": lambda: tree_sitter.Language(tree_sitter_typescript.language_tsx()),
     "java": lambda: tree_sitter.Language(tree_sitter_java.language()),
     "go": lambda: tree_sitter.Language(tree_sitter_go.language()),
 }
@@ -28,8 +31,8 @@ FILE_EXTENSION_MAP: dict[str, str] = {
     ".mjs": "javascript",
     ".cjs": "javascript",
     ".jsx": "javascript",
-    ".ts": "javascript",
-    ".tsx": "javascript",
+    ".ts": "typescript",
+    ".tsx": "tsx",
     ".java": "java",
     ".go": "go",
 }
@@ -62,7 +65,7 @@ LANGUAGE_QUERIES: dict[str, LanguageInfo] = {
     ),
     "javascript": LanguageInfo(
         name="javascript",
-        extensions=[".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx"],
+        extensions=[".js", ".mjs", ".cjs", ".jsx"],
         function_query="[(function_declaration name: (identifier) @name) (method_definition name: (property_identifier) @name)] @function",
         class_query="(class_declaration name: (identifier) @name) @class",
         call_query="[(call_expression function: (identifier) @callee) (call_expression function: (member_expression object: (_) @object property: (property_identifier) @method))] @call",
@@ -70,6 +73,28 @@ LANGUAGE_QUERIES: dict[str, LanguageInfo] = {
         variable_query="[(variable_declarator name: (identifier) @name) (assignment_expression left: (identifier) @name)] @declaration",
         string_query="[(string) (template_string)] @string",
         field_query="(class_body (field_definition property: (property_identifier) @name type: (type_annotation)? @type)) @field",
+    ),
+    "typescript": LanguageInfo(
+        name="typescript",
+        extensions=[".ts"],
+        function_query="[(function_declaration name: (identifier) @name) (method_definition name: (property_identifier) @name)] @function",
+        class_query="(class_declaration name: (type_identifier) @name) @class",
+        call_query="[(call_expression function: (identifier) @callee) (call_expression function: (member_expression object: (_) @object property: (property_identifier) @method))] @call",
+        import_query="(import_statement source: (string) @module) @import",
+        variable_query="[(variable_declarator name: (identifier) @name) (assignment_expression left: (identifier) @name)] @declaration",
+        string_query="[(string) (template_string)] @string",
+        field_query="(class_body (public_field_definition name: (property_identifier) @name type: (type_annotation)? @type)) @field",
+    ),
+    "tsx": LanguageInfo(
+        name="tsx",
+        extensions=[".tsx"],
+        function_query="[(function_declaration name: (identifier) @name) (method_definition name: (property_identifier) @name)] @function",
+        class_query="(class_declaration name: (type_identifier) @name) @class",
+        call_query="[(call_expression function: (identifier) @callee) (call_expression function: (member_expression object: (_) @object property: (property_identifier) @method))] @call",
+        import_query="(import_statement source: (string) @module) @import",
+        variable_query="[(variable_declarator name: (identifier) @name) (assignment_expression left: (identifier) @name)] @declaration",
+        string_query="[(string) (template_string)] @string",
+        field_query="(class_body (public_field_definition name: (property_identifier) @name type: (type_annotation)? @type)) @field",
     ),
     "java": LanguageInfo(
         name="java",
