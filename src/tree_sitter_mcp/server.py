@@ -43,7 +43,8 @@ def get_functions(path: str, query: str = "") -> dict:
             analyzer = CodeAnalyzer(path)
             functions = analyzer.get_functions()
             if query:
-                functions = [f for f in functions if query in f.name]
+                q = query.lower()
+                functions = [f for f in functions if q in f.name.lower()]
             return {
                 "path": path,
                 "path_type": "file",
@@ -55,7 +56,8 @@ def get_functions(path: str, query: str = "") -> dict:
             project = ProjectAnalyzer(path)
             functions = project.get_functions()
             if query:
-                functions = [f for f in functions if query in f.name]
+                q = query.lower()
+                functions = [f for f in functions if q in f.name.lower()]
             return {
                 "path": path,
                 "path_type": project.path_type,
@@ -81,7 +83,8 @@ def get_classes(path: str, query: str = "") -> dict:
             analyzer = CodeAnalyzer(path)
             classes = analyzer.get_classes()
             if query:
-                classes = [c for c in classes if query in c.name]
+                q = query.lower()
+                classes = [c for c in classes if q in c.name.lower()]
             return {
                 "path": path,
                 "path_type": "file",
@@ -93,7 +96,8 @@ def get_classes(path: str, query: str = "") -> dict:
             project = ProjectAnalyzer(path)
             classes = project.get_classes()
             if query:
-                classes = [c for c in classes if query in c.name]
+                q = query.lower()
+                classes = [c for c in classes if q in c.name.lower()]
             return {
                 "path": path,
                 "path_type": project.path_type,
@@ -155,7 +159,8 @@ def get_imports(path: str, query: str = "") -> dict:
             analyzer = CodeAnalyzer(path)
             imports = analyzer.get_imports()
             if query:
-                imports = [i for i in imports if query in i.module]
+                q = query.lower()
+                imports = [i for i in imports if q in i.module.lower()]
             return {
                 "path": path,
                 "path_type": "file",
@@ -167,7 +172,8 @@ def get_imports(path: str, query: str = "") -> dict:
             project = ProjectAnalyzer(path)
             imports = project.get_imports()
             if query:
-                imports = [i for i in imports if query in i.module]
+                q = query.lower()
+                imports = [i for i in imports if q in i.module.lower()]
             return {
                 "path": path,
                 "path_type": project.path_type,
@@ -193,7 +199,8 @@ def get_variables(path: str, query: str = "") -> dict:
             analyzer = CodeAnalyzer(path)
             variables = analyzer.get_variables()
             if query:
-                variables = [v for v in variables if query in v.name]
+                q = query.lower()
+                variables = [v for v in variables if q in v.name.lower()]
             return {
                 "path": path,
                 "path_type": "file",
@@ -205,7 +212,8 @@ def get_variables(path: str, query: str = "") -> dict:
             project = ProjectAnalyzer(path)
             variables = project.get_variables()
             if query:
-                variables = [v for v in variables if query in v.name]
+                q = query.lower()
+                variables = [v for v in variables if q in v.name.lower()]
             return {
                 "path": path,
                 "path_type": project.path_type,
@@ -256,11 +264,11 @@ def get_callers(path: str, function_name: str, class_name: str | None = None) ->
 
 @mcp.tool
 def get_callees(path: str, function_name: str, class_name: str | None = None) -> dict:
-    """Get all functions called by a specific function.
+    """Find all functions called by a specific function.
 
     Args:
         path: File path, glob pattern (e.g., **/*.py), or directory path
-        function_name: Name of the function to analyze
+        function_name: Name of the function to find callees for
         class_name: Optional class name to filter methods (if None, returns all matches)
     """
     try:
