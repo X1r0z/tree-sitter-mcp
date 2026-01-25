@@ -77,6 +77,7 @@ class CallInfo:
     callee: str
     location: Location
     caller: str | None = None
+    caller_class_name: str | None = None
     object_name: str | None = None
     is_method_call: bool = False
 
@@ -426,8 +427,18 @@ class CodeAnalyzer:
         for call in all_calls:
             if call.callee != function_name:
                 continue
-            if class_name is not None and call.object_name != class_name:
-                continue
+            if class_name is not None:
+                matches_explicit_target = call.object_name == class_name
+                matches_implicit_same_class = (
+                    call.object_name is None and call.caller_class_name == class_name
+                )
+                matches_this_qualifier = (
+                    call.object_name == "this" and call.caller_class_name == class_name
+                )
+                if not (
+                    matches_explicit_target or matches_implicit_same_class or matches_this_qualifier
+                ):
+                    continue
             caller = call.caller or "<module>"
             entry = {
                 "caller": caller,
@@ -757,17 +768,31 @@ class CodeAnalyzer:
         calls = []
         for call_node in call_nodes:
             caller = self._find_enclosing_function(call_node)
+            caller_class_name = self._find_enclosing_class(call_node)
             callee = ""
             is_method = False
             obj_name = None
 
-            func_node = call_node.child_by_field_name("function")
-            if func_node:
-                if func_node.type == "identifier":
-                    callee = self._node_text(func_node)
-                elif func_node.type in ("attribute", "member_expression", "selector_expression"):
+            if self._language == "java":
+                name_node = call_node.child_by_field_name("name")
+                object_node = call_node.child_by_field_name("object")
+                if name_node:
+                    callee = self._node_text(name_node)
+                if object_node:
                     is_method = True
-                    callee, obj_name = self._parse_attribute_node(func_node)
+                    obj_name = self._node_text(object_node)
+            else:
+                func_node = call_node.child_by_field_name("function")
+                if func_node:
+                    if func_node.type == "identifier":
+                        callee = self._node_text(func_node)
+                    elif func_node.type in (
+                        "attribute",
+                        "member_expression",
+                        "selector_expression",
+                    ):
+                        is_method = True
+                        callee, obj_name = self._parse_attribute_node(func_node)
 
             if callee:
                 calls.append(
@@ -775,6 +800,7 @@ class CodeAnalyzer:
                         callee=callee,
                         location=self._node_location(call_node),
                         caller=caller,
+                        caller_class_name=caller_class_name,
                         is_method_call=is_method,
                         object_name=obj_name,
                     )
