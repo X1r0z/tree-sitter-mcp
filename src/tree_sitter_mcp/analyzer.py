@@ -673,7 +673,7 @@ class CodeAnalyzer:
 
     def _extract_super_classes_from_class(self, class_node: tree_sitter.Node) -> list[str]:
         """Extract parent class names from a class node."""
-        super_classes = []
+        super_classes: list[str] = []
 
         if self._language == "python":
             for child in class_node.children:
@@ -682,12 +682,68 @@ class CodeAnalyzer:
                         if arg.type == "identifier" or arg.type == "attribute":
                             super_classes.append(self._node_text(arg))
 
-        elif self._language == "javascript":
+        elif self._language in {"javascript", "typescript", "tsx"}:
+            seen: set[str] = set()
+
+            def add_name(name: str) -> None:
+                name = name.strip()
+                if not name or name in seen:
+                    return
+                seen.add(name)
+                super_classes.append(name)
+
+            def handle_expression(node: tree_sitter.Node | None) -> None:
+                if node is None:
+                    return
+
+                if node.type in {"identifier", "type_identifier", "property_identifier"}:
+                    add_name(self._node_text(node))
+                    return
+
+                if node.type == "member_expression":
+                    add_name(self._node_text(node))
+                    for c in reversed(node.children):
+                        if c.type in {"identifier", "property_identifier"}:
+                            add_name(self._node_text(c))
+                            break
+                    return
+
+                if node.type == "expression_with_type_arguments":
+                    expr = node.child_by_field_name("expression")
+                    if expr is not None:
+                        handle_expression(expr)
+                        return
+                    for c in node.named_children:
+                        handle_expression(c)
+                        return
+
+                if node.type == "generic_type":
+                    name_node = node.child_by_field_name("name")
+                    if name_node is not None:
+                        handle_expression(name_node)
+                        return
+                    for c in node.named_children:
+                        handle_expression(c)
+                        return
+
+            def walk_heritage(node: tree_sitter.Node) -> None:
+                if node.type == "class_heritage":
+                    for child in node.children:
+                        if child.type in {"extends_clause", "implements_clause"}:
+                            walk_heritage(child)
+                    return
+
+                if node.type in {"extends_clause", "implements_clause"}:
+                    for child in node.named_children:
+                        handle_expression(child)
+                    return
+
+                for child in node.children:
+                    walk_heritage(child)
+
             for child in class_node.children:
                 if child.type == "class_heritage":
-                    for sub in child.children:
-                        if sub.type == "identifier" or sub.type == "member_expression":
-                            super_classes.append(self._node_text(sub))
+                    walk_heritage(child)
 
         elif self._language == "java":
             for child in class_node.children:

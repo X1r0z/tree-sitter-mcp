@@ -399,9 +399,10 @@ def get_function_variables(path: str, function_name: str, class_name: str | None
             }
         else:
             project = ProjectAnalyzer(path)
-            variables = project.get_function_variables(function_name, class_name)
-            if not variables:
+            functions = project.get_all_functions_by_name(function_name, class_name)
+            if not functions:
                 return {"error": f"Function '{function_name}' not found"}
+            variables = project.get_function_variables(function_name, class_name)
             return {
                 "path": path,
                 "path_type": project.path_type,
