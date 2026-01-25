@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from fastmcp import FastMCP
 
 from .analyzer import CodeAnalyzer
@@ -11,7 +13,7 @@ mcp = FastMCP(
     name="tree-sitter-mcp",
     instructions="""
     Tree-sitter MCP Server for code analysis.
-    Provides function/class extraction, call graph analysis, and code structure analysis.
+    Provides function/class/field extraction, call graph analysis, inheritance analysis, and code structure analysis.
     Supported languages: Python, JavaScript, Java, Go
 
     Path parameter supports:
@@ -36,6 +38,7 @@ def get_functions(path: str, query: str = "") -> dict:
         query: Optional filter string for fuzzy matching function/method names (contains match)
     """
     try:
+        path = os.path.realpath(path)
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             functions = analyzer.get_functions()
@@ -73,6 +76,7 @@ def get_classes(path: str, query: str = "") -> dict:
         query: Optional filter string for fuzzy matching class names (contains match)
     """
     try:
+        path = os.path.realpath(path)
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             classes = analyzer.get_classes()
@@ -110,6 +114,7 @@ def get_fields(path: str, class_name: str) -> dict:
         class_name: Name of the class to get fields for
     """
     try:
+        path = os.path.realpath(path)
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             fields = analyzer.get_fields(class_name)
@@ -145,6 +150,7 @@ def get_imports(path: str, query: str = "") -> dict:
         query: Optional filter string for fuzzy matching module names (contains match)
     """
     try:
+        path = os.path.realpath(path)
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             imports = analyzer.get_imports()
@@ -182,6 +188,7 @@ def get_variables(path: str, query: str = "") -> dict:
         query: Optional filter string for fuzzy matching variable names (contains match)
     """
     try:
+        path = os.path.realpath(path)
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             variables = analyzer.get_variables()
@@ -220,6 +227,7 @@ def get_callers(path: str, function_name: str, class_name: str | None = None) ->
         class_name: Optional class name to filter methods (if None, returns all matches)
     """
     try:
+        path = os.path.realpath(path)
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             callers = analyzer.get_function_callers(function_name, class_name)
@@ -248,14 +256,15 @@ def get_callers(path: str, function_name: str, class_name: str | None = None) ->
 
 @mcp.tool
 def get_callees(path: str, function_name: str, class_name: str | None = None) -> dict:
-    """Find all functions called by a specific function.
+    """Get all functions called by a specific function.
 
     Args:
         path: File path, glob pattern (e.g., **/*.py), or directory path
-        function_name: Name of the function to find callees for
+        function_name: Name of the function to analyze
         class_name: Optional class name to filter methods (if None, returns all matches)
     """
     try:
+        path = os.path.realpath(path)
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             callees = analyzer.get_function_callees(function_name, class_name)
@@ -291,6 +300,7 @@ def find_symbols(path: str, name: str) -> dict:
         name: Identifier name to search for
     """
     try:
+        path = os.path.realpath(path)
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             refs = analyzer.find_symbols(name)
@@ -326,6 +336,7 @@ def get_function_definition(path: str, function_name: str, class_name: str | Non
         class_name: Optional class name to filter methods (if None, returns all matches)
     """
     try:
+        path = os.path.realpath(path)
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             functions = analyzer.get_all_functions_by_name(function_name, class_name)
@@ -365,6 +376,7 @@ def get_function_variables(path: str, function_name: str, class_name: str | None
         class_name: Optional class name to filter methods (if None, returns all matches)
     """
     try:
+        path = os.path.realpath(path)
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             variables = analyzer.get_function_variables(function_name, class_name)
@@ -405,6 +417,7 @@ def get_function_strings(path: str, function_name: str, class_name: str | None =
         class_name: Optional class name to filter methods (if None, returns all matches)
     """
     try:
+        path = os.path.realpath(path)
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             strings = analyzer.get_function_strings(function_name, class_name)
@@ -444,6 +457,7 @@ def get_super_classes(path: str, class_name: str) -> dict:
         class_name: Name of the class to find parent classes for
     """
     try:
+        path = os.path.realpath(path)
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             super_classes = analyzer.get_super_classes(class_name)
@@ -479,6 +493,7 @@ def get_sub_classes(path: str, class_name: str) -> dict:
         class_name: Name of the class to find child classes for
     """
     try:
+        path = os.path.realpath(path)
         if _is_single_file(path):
             analyzer = CodeAnalyzer(path)
             sub_classes = analyzer.get_sub_classes(class_name)

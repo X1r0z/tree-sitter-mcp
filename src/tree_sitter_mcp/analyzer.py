@@ -273,6 +273,34 @@ class CodeAnalyzer:
             current = current.parent
         return None
 
+    def _parse_attribute_node(self, node: tree_sitter.Node) -> tuple[str, str | None]:
+        """Parse an attribute/member_expression/selector_expression node.
+
+        Returns (callee, object_name) tuple.
+        For 'os.path.join', returns ('join', 'os.path').
+        For 'self.method', returns ('method', 'self').
+        For 'os.makedirs', returns ('makedirs', 'os').
+        """
+        id_types = ("identifier", "property_identifier", "field_identifier")
+        attr_types = ("attribute", "member_expression", "selector_expression")
+
+        callee = ""
+        obj_name = None
+        ids = []
+
+        for child in node.children:
+            if child.type in id_types:
+                ids.append(self._node_text(child))
+            elif child.type in attr_types:
+                obj_name = self._node_text(child)
+
+        if ids:
+            callee = ids[-1]
+            if len(ids) > 1 and obj_name is None:
+                obj_name = ids[0]
+
+        return callee, obj_name
+
     def get_functions(self) -> list[FunctionInfo]:
         if not self._language:
             return []
@@ -389,24 +417,25 @@ class CodeAnalyzer:
         return callees
 
     def get_function_callers(self, function_name: str, class_name: str | None = None) -> list[dict]:
-        """Get all functions that call a specific function."""
-        funcs = self.get_all_functions_by_name(function_name, class_name)
+        """Get all functions that call a specific function.
+
+        Note: class_name is used to filter calls by the object name (e.g., self.method()).
+        """
         all_calls = self.get_calls()
         callers: list[dict] = []
-        for func in funcs:
-            for call in all_calls:
-                caller = call.caller or "<module>"
-                if call.callee == function_name:
-                    entry = {
-                        "caller": caller,
-                        "line": call.location.start_line,
-                        "target_class": func.class_name,
-                    }
-                    if not any(
-                        e["caller"] == caller and e["target_class"] == func.class_name
-                        for e in callers
-                    ):
-                        callers.append(entry)
+        for call in all_calls:
+            if call.callee != function_name:
+                continue
+            if class_name is not None and call.object_name != class_name:
+                continue
+            caller = call.caller or "<module>"
+            entry = {
+                "caller": caller,
+                "line": call.location.start_line,
+                "target_class": class_name,
+            }
+            if not any(e["caller"] == caller and e["line"] == entry["line"] for e in callers):
+                callers.append(entry)
         return callers
 
     def get_classes(self) -> list[ClassInfo]:
@@ -724,14 +753,6 @@ class CodeAnalyzer:
 
         captures = self._run_query(lang_info.call_query)
         call_nodes = captures.get("call", [])
-        callee_nodes = captures.get("callee", [])
-        method_nodes = captures.get("method", [])
-        object_nodes = captures.get("object", [])
-
-        # Build index by start_byte for O(1) lookup instead of O(n) scan
-        callee_by_start = {n.start_byte: n for n in callee_nodes}
-        method_by_start = {n.start_byte: n for n in method_nodes}
-        object_by_start = {n.start_byte: n for n in object_nodes}
 
         calls = []
         for call_node in call_nodes:
@@ -740,24 +761,13 @@ class CodeAnalyzer:
             is_method = False
             obj_name = None
 
-            # Find matching captures within call_node's byte range
-            call_start, call_end = call_node.start_byte, call_node.end_byte
-
-            for start_byte, node in callee_by_start.items():
-                if call_start <= start_byte and node.end_byte <= call_end:
-                    callee = self._node_text(node)
-                    break
-
-            for start_byte, node in method_by_start.items():
-                if call_start <= start_byte and node.end_byte <= call_end:
-                    callee = self._node_text(node)
+            func_node = call_node.child_by_field_name("function")
+            if func_node:
+                if func_node.type == "identifier":
+                    callee = self._node_text(func_node)
+                elif func_node.type in ("attribute", "member_expression", "selector_expression"):
                     is_method = True
-                    break
-
-            for start_byte, node in object_by_start.items():
-                if call_start <= start_byte and node.end_byte <= call_end:
-                    obj_name = self._node_text(node)
-                    break
+                    callee, obj_name = self._parse_attribute_node(func_node)
 
             if callee:
                 calls.append(
