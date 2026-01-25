@@ -457,6 +457,12 @@ class CodeAnalyzer:
         if not lang_info:
             return []
 
+        methods_by_class: dict[str, set[str]] = {}
+        if self._language == "go":
+            for func in self.get_functions():
+                if func.class_name:
+                    methods_by_class.setdefault(func.class_name, set()).add(func.name)
+
         captures = self._run_query(lang_info.class_query)
         class_nodes = captures.get("class", [])
         name_nodes = captures.get("name", [])
@@ -473,6 +479,8 @@ class CodeAnalyzer:
                     break
             if name:
                 methods = self._extract_methods_from_class(class_node)
+                if self._language == "go":
+                    methods = sorted(set(methods) | methods_by_class.get(name, set()))
                 fields = self._extract_fields_from_class(class_node)
                 super_classes = self._extract_super_classes_from_class(class_node)
                 classes.append(
@@ -495,6 +503,8 @@ class CodeAnalyzer:
             "method_definition",
             "method_declaration",
             "constructor_declaration",
+            "method_elem",
+            "method_spec",
         }
 
         def walk(node: tree_sitter.Node):
