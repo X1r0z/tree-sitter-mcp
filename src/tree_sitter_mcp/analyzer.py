@@ -769,6 +769,72 @@ class CodeAnalyzer:
                                             break
 
         elif self._language == "go":
+
+            def parse_embedded_type_name(node: tree_sitter.Node) -> str | None:
+                if node.type == "type_identifier":
+                    return self._node_text(node)
+
+                if node.type == "qualified_type":
+                    for c in node.children:
+                        if c.type == "type_identifier":
+                            return self._node_text(c)
+                    return None
+
+                if node.type == "generic_type":
+                    for c in node.children:
+                        if c.type in {"type_identifier", "qualified_type", "pointer_type"}:
+                            name = parse_embedded_type_name(c)
+                            if name:
+                                return name
+                    return None
+
+                if node.type == "pointer_type":
+                    for c in node.children:
+                        if c.type in {
+                            "type_identifier",
+                            "qualified_type",
+                            "generic_type",
+                            "parenthesized_type",
+                        }:
+                            name = parse_embedded_type_name(c)
+                            if name:
+                                return name
+                    return None
+
+                if node.type == "parenthesized_type":
+                    for c in node.named_children:
+                        name = parse_embedded_type_name(c)
+                        if name:
+                            return name
+                    return None
+
+                return None
+
+            def embedded_from_field_declaration(fd: tree_sitter.Node) -> str | None:
+                if any(c.type == "field_identifier" for c in fd.children):
+                    return None
+
+                for c in fd.children:
+                    if c.type == "*":
+                        continue
+                    if c.type in {
+                        "type_identifier",
+                        "qualified_type",
+                        "generic_type",
+                        "pointer_type",
+                        "parenthesized_type",
+                    }:
+                        name = parse_embedded_type_name(c)
+                        if name:
+                            return name
+
+                for c in fd.named_children:
+                    name = parse_embedded_type_name(c)
+                    if name:
+                        return name
+
+                return None
+
             for child in class_node.children:
                 if child.type == "type_spec":
                     for sub in child.children:
@@ -777,19 +843,9 @@ class CodeAnalyzer:
                                 if field.type == "field_declaration_list":
                                     for fd in field.children:
                                         if fd.type == "field_declaration":
-                                            has_name = any(
-                                                c.type == "field_identifier" for c in fd.children
-                                            )
-                                            if not has_name:
-                                                for c in fd.children:
-                                                    if c.type == "type_identifier":
-                                                        super_classes.append(self._node_text(c))
-                                                    elif c.type == "pointer_type":
-                                                        for pt in c.children:
-                                                            if pt.type == "type_identifier":
-                                                                super_classes.append(
-                                                                    self._node_text(pt)
-                                                                )
+                                            embedded = embedded_from_field_declaration(fd)
+                                            if embedded:
+                                                super_classes.append(embedded)
 
         return super_classes
 
