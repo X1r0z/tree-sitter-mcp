@@ -1,6 +1,6 @@
 # tree-sitter-mcp
 
-A MCP server for code analysis using [tree-sitter](https://tree-sitter.github.io/tree-sitter/). Provides AST-based code structure extraction, call graph analysis, and symbol reference tracking.
+A code analysis toolkit using [tree-sitter](https://tree-sitter.github.io/tree-sitter/) for AST-based code structure extraction, call graph analysis, and symbol reference tracking.
 
 ## Features
 
@@ -11,6 +11,7 @@ A MCP server for code analysis using [tree-sitter](https://tree-sitter.github.io
 - **Variable Tracking** - Identify variable declarations with scope information
 - **Symbol Reference Tracking** - Find all references to a specific symbol
 - **Multi-Path Support** - Analyze single files, glob patterns, or entire directories
+- **Dual Interface** - Use as MCP server or standalone CLI tool
 
 ## Supported Languages
 
@@ -33,7 +34,7 @@ pip install git+https://github.com/X1r0z/tree-sitter-mcp
 
 ## Usage
 
-Run the server using `tree-sitter-mcp` directly:
+### MCP Server
 
 ```json
 {
@@ -45,23 +46,28 @@ Run the server using `tree-sitter-mcp` directly:
 }
 ```
 
-Or run the server using `uv` from the source directory:
+### CLI Tool
 
-```json
-{
-  "mcpServers": {
-    "tree-sitter": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory",
-        "/path/to/tree-sitter-mcp",
-        "tree-sitter-mcp"
-      ]
-    }
-  }
-}
+Use `tree-sitter-analyzer` for command-line analysis:
+
+```bash
+# List all functions in a file
+tree-sitter-analyzer functions ./src/main.py
+
+# List all classes in a directory
+tree-sitter-analyzer classes ./src/
+
+# Find all callers of a function
+tree-sitter-analyzer callers ./src/ --function process_data
+
+# Get function definition
+tree-sitter-analyzer definition ./src/main.py --function main
+
+# Output as JSON
+tree-sitter-analyzer functions ./src/ --json
 ```
+
+See [CLI.md](CLI.md) for complete CLI documentation.
 
 ## Tools
 
