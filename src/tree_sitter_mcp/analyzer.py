@@ -57,6 +57,7 @@ class ClassInfo:
     location: Location
     methods: list[str] = field(default_factory=list)
     fields: list[str] = field(default_factory=list)
+    super_classes: list[str] = field(default_factory=list)
 
     def to_dict(self, include_file: bool = True) -> dict:
         result = {
@@ -433,12 +434,14 @@ class CodeAnalyzer:
             if name:
                 methods = self._extract_methods_from_class(class_node)
                 fields = self._extract_fields_from_class(class_node)
+                super_classes = self._extract_super_classes_from_class(class_node)
                 classes.append(
                     ClassInfo(
                         name=name,
                         location=self._node_location(class_node),
                         methods=methods,
                         fields=fields,
+                        super_classes=super_classes,
                     )
                 )
 
@@ -515,6 +518,72 @@ class CodeAnalyzer:
 
         walk(class_node)
         return fields
+
+    def _extract_super_classes_from_class(self, class_node: tree_sitter.Node) -> list[str]:
+        """Extract parent class names from a class node."""
+        super_classes = []
+
+        if self._language == "python":
+            for child in class_node.children:
+                if child.type == "argument_list":
+                    for arg in child.children:
+                        if arg.type == "identifier" or arg.type == "attribute":
+                            super_classes.append(self._node_text(arg))
+
+        elif self._language == "javascript":
+            for child in class_node.children:
+                if child.type == "class_heritage":
+                    for sub in child.children:
+                        if sub.type == "identifier" or sub.type == "member_expression":
+                            super_classes.append(self._node_text(sub))
+
+        elif self._language == "java":
+            for child in class_node.children:
+                if child.type == "superclass":
+                    for sub in child.children:
+                        if sub.type == "type_identifier":
+                            super_classes.append(self._node_text(sub))
+                        elif sub.type == "generic_type":
+                            for g in sub.children:
+                                if g.type == "type_identifier":
+                                    super_classes.append(self._node_text(g))
+                                    break
+                elif child.type == "super_interfaces":
+                    for sub in child.children:
+                        if sub.type == "type_list":
+                            for t in sub.children:
+                                if t.type == "type_identifier":
+                                    super_classes.append(self._node_text(t))
+                                elif t.type == "generic_type":
+                                    for g in t.children:
+                                        if g.type == "type_identifier":
+                                            super_classes.append(self._node_text(g))
+                                            break
+
+        elif self._language == "go":
+            for child in class_node.children:
+                if child.type == "type_spec":
+                    for sub in child.children:
+                        if sub.type == "struct_type":
+                            for field in sub.children:
+                                if field.type == "field_declaration_list":
+                                    for fd in field.children:
+                                        if fd.type == "field_declaration":
+                                            has_name = any(
+                                                c.type == "field_identifier" for c in fd.children
+                                            )
+                                            if not has_name:
+                                                for c in fd.children:
+                                                    if c.type == "type_identifier":
+                                                        super_classes.append(self._node_text(c))
+                                                    elif c.type == "pointer_type":
+                                                        for pt in c.children:
+                                                            if pt.type == "type_identifier":
+                                                                super_classes.append(
+                                                                    self._node_text(pt)
+                                                                )
+
+        return super_classes
 
     def get_fields(self, class_name: str | None = None) -> list[FieldInfo]:
         """Get all fields, optionally filtered by class name."""
@@ -804,3 +873,40 @@ class CodeAnalyzer:
                 graph[callee].append(entry)
 
         return graph
+
+    def get_class_by_name(self, class_name: str) -> ClassInfo | None:
+        """Get a specific class by name."""
+        for cls in self.get_classes():
+            if cls.name == class_name:
+                return cls
+        return None
+
+    def get_super_classes(self, class_name: str) -> list[ClassInfo]:
+        """Get all parent classes of a specific class.
+
+        Returns ClassInfo for each parent class that can be found in this file.
+        """
+        target_class = self.get_class_by_name(class_name)
+        if not target_class:
+            return []
+
+        all_classes = self.get_classes()
+        class_map = {c.name: c for c in all_classes}
+
+        result = []
+        for parent_name in target_class.super_classes:
+            if parent_name in class_map:
+                result.append(class_map[parent_name])
+        return result
+
+    def get_sub_classes(self, class_name: str) -> list[ClassInfo]:
+        """Get all child classes that inherit from a specific class.
+
+        Returns ClassInfo for each child class found in this file.
+        """
+        all_classes = self.get_classes()
+        result = []
+        for cls in all_classes:
+            if class_name in cls.super_classes:
+                result.append(cls)
+        return result

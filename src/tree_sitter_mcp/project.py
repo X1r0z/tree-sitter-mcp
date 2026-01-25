@@ -276,3 +276,48 @@ class ProjectAnalyzer:
                 file_refs = analyzer.find_symbols(name)
                 refs.extend(file_refs)
         return refs
+
+    def get_class_by_name(self, class_name: str) -> ClassInfo | None:
+        """Find a class by name across all files."""
+        for file_path in self.files:
+            analyzer = self._get_analyzer(file_path)
+            if analyzer:
+                cls = analyzer.get_class_by_name(class_name)
+                if cls:
+                    return cls
+        return None
+
+    def get_super_classes(self, class_name: str) -> list[ClassInfo]:
+        """Get all parent classes of a specific class across all files.
+
+        First finds the target class, then searches for its parent classes.
+        """
+        target_class = None
+        for file_path in self.files:
+            analyzer = self._get_analyzer(file_path)
+            if analyzer:
+                cls = analyzer.get_class_by_name(class_name)
+                if cls:
+                    target_class = cls
+                    break
+
+        if not target_class:
+            return []
+
+        all_classes = self.get_classes()
+        class_map = {c.name: c for c in all_classes}
+
+        result = []
+        for parent_name in target_class.super_classes:
+            if parent_name in class_map:
+                result.append(class_map[parent_name])
+        return result
+
+    def get_sub_classes(self, class_name: str) -> list[ClassInfo]:
+        """Get all child classes that inherit from a specific class across all files."""
+        all_classes = self.get_classes()
+        result = []
+        for cls in all_classes:
+            if class_name in cls.super_classes:
+                result.append(cls)
+        return result

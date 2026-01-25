@@ -435,6 +435,76 @@ def get_function_strings(path: str, function_name: str, class_name: str | None =
         return {"error": str(e)}
 
 
+@mcp.tool
+def get_super_classes(path: str, class_name: str) -> dict:
+    """Get all parent classes (superclasses) of a specific class.
+
+    Args:
+        path: File path, glob pattern (e.g., **/*.py), or directory path
+        class_name: Name of the class to find parent classes for
+    """
+    try:
+        if _is_single_file(path):
+            analyzer = CodeAnalyzer(path)
+            super_classes = analyzer.get_super_classes(class_name)
+            return {
+                "path": path,
+                "path_type": "file",
+                "language": analyzer._language,
+                "class_name": class_name,
+                "count": len(super_classes),
+                "super_classes": [c.to_dict(include_file=False) for c in super_classes],
+            }
+        else:
+            project = ProjectAnalyzer(path)
+            super_classes = project.get_super_classes(class_name)
+            return {
+                "path": path,
+                "path_type": project.path_type,
+                "files_searched": len(project.files),
+                "class_name": class_name,
+                "count": len(super_classes),
+                "super_classes": [c.to_dict(include_file=True) for c in super_classes],
+            }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool
+def get_sub_classes(path: str, class_name: str) -> dict:
+    """Get all child classes (subclasses) that inherit from a specific class.
+
+    Args:
+        path: File path, glob pattern (e.g., **/*.py), or directory path
+        class_name: Name of the class to find child classes for
+    """
+    try:
+        if _is_single_file(path):
+            analyzer = CodeAnalyzer(path)
+            sub_classes = analyzer.get_sub_classes(class_name)
+            return {
+                "path": path,
+                "path_type": "file",
+                "language": analyzer._language,
+                "class_name": class_name,
+                "count": len(sub_classes),
+                "sub_classes": [c.to_dict(include_file=False) for c in sub_classes],
+            }
+        else:
+            project = ProjectAnalyzer(path)
+            sub_classes = project.get_sub_classes(class_name)
+            return {
+                "path": path,
+                "path_type": project.path_type,
+                "files_searched": len(project.files),
+                "class_name": class_name,
+                "count": len(sub_classes),
+                "sub_classes": [c.to_dict(include_file=True) for c in sub_classes],
+            }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 def main():
     mcp.run()
 
