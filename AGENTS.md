@@ -15,7 +15,7 @@
   - `languages.py` - Language configs: parsers, queries, extension mapping
 - **tree_sitter_analyzer/** - CLI wrapper around CodeAnalyzer/ProjectAnalyzer
 - Supported: Python, JavaScript/TypeScript, Java, Go
-- Path types: single file, glob (**/*.py), directory (recursive)
+- Path types: glob (**/*.py), directory (recursive)
 
 ## Code Style
 - Python 3.10+, `from __future__ import annotations` at top of every file

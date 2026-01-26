@@ -19,19 +19,15 @@ from .languages import FILE_EXTENSION_MAP
 
 @dataclass
 class PathType:
-    FILE = "file"
     GLOB = "glob"
     DIRECTORY = "directory"
 
 
 def detect_path_type(path: str) -> str:
-    """Detect if path is a file, glob pattern, or directory."""
+    """Detect if path is a glob pattern or directory."""
     if any(c in path for c in ["*", "?", "[", "]"]):
         return PathType.GLOB
-    p = Path(path)
-    if p.is_dir():
-        return PathType.DIRECTORY
-    return PathType.FILE
+    return PathType.DIRECTORY
 
 
 def get_supported_extensions() -> set[str]:
@@ -43,19 +39,13 @@ def find_files(path: str) -> list[str]:
     """Find all supported source files based on path type.
 
     Args:
-        path: File path, glob pattern, or directory path
+        path: Glob pattern or directory path
 
     Returns:
         List of absolute file paths
     """
     path_type = detect_path_type(path)
     extensions = get_supported_extensions()
-
-    if path_type == PathType.FILE:
-        p = Path(path)
-        if p.exists() and p.is_file() and p.suffix in extensions:
-            return [str(p.resolve())]
-        return []
 
     if path_type == PathType.GLOB:
         if path.startswith("/"):
@@ -83,10 +73,10 @@ class ProjectAnalyzer:
     """Analyzes multiple source files in a project."""
 
     def __init__(self, path: str):
-        """Initialize with a file path, glob pattern, or directory.
+        """Initialize with a glob pattern or directory.
 
         Args:
-            path: File path, glob pattern (e.g., "**/*.py"), or directory path
+            path: Glob pattern (e.g., "**/*.py") or directory path
         """
         self.path = path
         self.path_type = detect_path_type(path)

@@ -24,7 +24,6 @@ tree-sitter-analyzer <command> <path> [options]
 
 All commands accept a `path` argument that supports:
 
-- **Single file**: `/path/to/file.py`
 - **Glob pattern**: `**/*.py`, `src/**/*.js`
 - **Directory**: `/path/to/project` (searches all supported files recursively)
 
@@ -78,14 +77,17 @@ tree-sitter-analyzer functions <path> [-q QUERY] [--body] [--json] [--yaml]
 **Examples:**
 
 ```bash
-# List all functions in a file
-tree-sitter-analyzer functions ./src/main.py
+# List all functions in a directory
+tree-sitter-analyzer functions ./src/
+
+# List all functions using glob pattern
+tree-sitter-analyzer functions "**/*.py"
 
 # Filter functions containing "get"
 tree-sitter-analyzer functions ./src/ -q get
 
 # Include function bodies
-tree-sitter-analyzer functions ./src/main.py --body
+tree-sitter-analyzer functions ./src/ --body
 
 # Output as JSON
 tree-sitter-analyzer functions ./src/ --json
@@ -153,8 +155,8 @@ tree-sitter-analyzer imports <path> [-q QUERY] [--json] [--yaml]
 **Examples:**
 
 ```bash
-# List all imports
-tree-sitter-analyzer imports ./src/main.py
+# List all imports in a directory
+tree-sitter-analyzer imports ./src/
 
 # Find imports containing "json"
 tree-sitter-analyzer imports ./src/ -q json
@@ -175,8 +177,8 @@ tree-sitter-analyzer variables <path> [-q QUERY] [--json] [--yaml]
 **Examples:**
 
 ```bash
-# List all variables
-tree-sitter-analyzer variables ./src/config.py
+# List all variables in a directory
+tree-sitter-analyzer variables ./src/
 
 # Find variables containing "config"
 tree-sitter-analyzer variables ./src/ -q config
@@ -200,7 +202,7 @@ tree-sitter-analyzer super-classes <path> -c CLASS_NAME [--json] [--yaml]
 
 ```bash
 # Find parent classes
-tree-sitter-analyzer super-classes ./src/models.py -c AdminUser
+tree-sitter-analyzer super-classes ./src/ -c AdminUser
 ```
 
 #### `sub-classes` - Get Child Classes
@@ -264,7 +266,7 @@ tree-sitter-analyzer callees <path> -f FUNCTION [-c CLASS_NAME] [--json] [--yaml
 
 ```bash
 # Find all functions called by main
-tree-sitter-analyzer callees ./src/main.py -f main
+tree-sitter-analyzer callees ./src/ -f main
 
 # Find callees of a method
 tree-sitter-analyzer callees ./src/ -f initialize -c Application
@@ -289,7 +291,7 @@ tree-sitter-analyzer definition <path> -f FUNCTION [-c CLASS_NAME] [--json] [--y
 
 ```bash
 # Get function definition
-tree-sitter-analyzer definition ./src/utils.py -f parse_config
+tree-sitter-analyzer definition ./src/ -f parse_config
 
 # Get method definition from a class
 tree-sitter-analyzer definition ./src/ -f connect -c Database
@@ -312,7 +314,7 @@ tree-sitter-analyzer function-variables <path> -f FUNCTION [-c CLASS_NAME] [--js
 
 ```bash
 # Get variables in a function
-tree-sitter-analyzer function-variables ./src/main.py -f process_request
+tree-sitter-analyzer function-variables ./src/ -f process_request
 ```
 
 #### `function-strings` - Get Strings in Function
@@ -332,7 +334,7 @@ tree-sitter-analyzer function-strings <path> -f FUNCTION [-c CLASS_NAME] [--json
 
 ```bash
 # Get string literals in a function
-tree-sitter-analyzer function-strings ./src/api.py -f handle_request
+tree-sitter-analyzer function-strings ./src/ -f handle_request
 ```
 
 ### Symbol Reference Commands
@@ -355,8 +357,8 @@ tree-sitter-analyzer symbols <path> -n NAME [--json] [--yaml]
 # Find all references to a symbol
 tree-sitter-analyzer symbols ./src/ -n CONFIG_PATH
 
-# Find references in a single file
-tree-sitter-analyzer symbols ./src/main.py -n logger
+# Find references using glob pattern
+tree-sitter-analyzer symbols "**/*.py" -n logger
 ```
 
 ## Exit Codes

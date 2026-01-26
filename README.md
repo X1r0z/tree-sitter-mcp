@@ -4,7 +4,7 @@ A code analysis toolkit using [tree-sitter](https://tree-sitter.github.io/tree-s
 
 ## Features
 
-- **Function/Class/Field Extraction** - Extract all function/method and class/struct/interface/field definitions
+- **Function/Class Extraction** - Extract all function/method and class/struct/interface/field definitions
 - **Inheritance Analysis** - Extract class inheritance relationships, including parent classes and child classes
 - **Call Graph Analysis** - Build call graphs showing caller-callee relationships
 - **Import Analysis** - Extract import statements and dependencies
@@ -52,17 +52,17 @@ pip install git+https://github.com/X1r0z/tree-sitter-mcp
 Use `tree-sitter-analyzer` for command-line analysis:
 
 ```bash
-# List all functions in a file
-tree-sitter-analyzer functions ./src/main.py
-
 # List all classes in a directory
 tree-sitter-analyzer classes ./src/
+
+# List all functions using glob pattern
+tree-sitter-analyzer functions "**/*.py"
 
 # Find all callers of a function
 tree-sitter-analyzer callers ./src/ --function process_data
 
 # Get function definition
-tree-sitter-analyzer definition ./src/main.py --function main
+tree-sitter-analyzer definition ./src/ --function main
 
 # Output as JSON
 tree-sitter-analyzer functions ./src/ --json
@@ -117,7 +117,6 @@ See [CLI.md](CLI.md) for complete CLI documentation.
 
 All tools accept a `path` parameter that supports:
 
-- **Single file**: `/path/to/file.py`
 - **Glob pattern**: `**/*.py`, `src/**/*.js`
 - **Directory**: `/path/to/project` (searches all supported files recursively)
 

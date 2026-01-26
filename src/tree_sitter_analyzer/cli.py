@@ -9,13 +9,7 @@ import sys
 
 import yaml
 
-from tree_sitter_mcp.analyzer import CodeAnalyzer
-from tree_sitter_mcp.project import PathType, ProjectAnalyzer, detect_path_type
-
-
-def _is_single_file(path: str) -> bool:
-    """Check if path refers to a single file."""
-    return detect_path_type(path) == PathType.FILE
+from tree_sitter_mcp.project import ProjectAnalyzer
 
 
 def _output_result(result: dict, output_format: str) -> None:
@@ -35,11 +29,9 @@ def _print_pretty(result: dict) -> None:
         return
 
     path = result.get("path", "")
-    path_type = result.get("path_type", "")
     count = result.get("count", 0)
 
     print(f"Path: {path}")
-    print(f"Type: {path_type}")
     if "files_searched" in result:
         print(f"Files searched: {result['files_searched']}")
     print(f"Count: {count}")
@@ -164,36 +156,19 @@ def cmd_functions(args: argparse.Namespace) -> dict:
     try:
         path = os.path.realpath(args.path)
         query = args.query or ""
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            functions = analyzer.get_functions()
-            if query:
-                q = query.lower()
-                functions = [f for f in functions if q in f.name.lower()]
-            return {
-                "path": path,
-                "path_type": "file",
-                "language": analyzer._language,
-                "count": len(functions),
-                "functions": [
-                    f.to_dict(include_body=args.body, include_file=False) for f in functions
-                ],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            functions = project.get_functions()
-            if query:
-                q = query.lower()
-                functions = [f for f in functions if q in f.name.lower()]
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "count": len(functions),
-                "functions": [
-                    f.to_dict(include_body=args.body, include_file=True) for f in functions
-                ],
-            }
+        project = ProjectAnalyzer(path)
+        functions = project.get_functions()
+        if query:
+            q = query.lower()
+            functions = [f for f in functions if q in f.name.lower()]
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "count": len(functions),
+            "functions": [
+                f.to_dict(include_body=args.body, include_file=True) for f in functions
+            ],
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -203,32 +178,17 @@ def cmd_classes(args: argparse.Namespace) -> dict:
     try:
         path = os.path.realpath(args.path)
         query = args.query or ""
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            classes = analyzer.get_classes()
-            if query:
-                q = query.lower()
-                classes = [c for c in classes if q in c.name.lower()]
-            return {
-                "path": path,
-                "path_type": "file",
-                "language": analyzer._language,
-                "count": len(classes),
-                "classes": [c.to_dict(include_file=False) for c in classes],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            classes = project.get_classes()
-            if query:
-                q = query.lower()
-                classes = [c for c in classes if q in c.name.lower()]
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "count": len(classes),
-                "classes": [c.to_dict(include_file=True) for c in classes],
-            }
+        project = ProjectAnalyzer(path)
+        classes = project.get_classes()
+        if query:
+            q = query.lower()
+            classes = [c for c in classes if q in c.name.lower()]
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "count": len(classes),
+            "classes": [c.to_dict(include_file=True) for c in classes],
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -238,28 +198,15 @@ def cmd_fields(args: argparse.Namespace) -> dict:
     try:
         path = os.path.realpath(args.path)
         class_name = args.class_name
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            fields = analyzer.get_fields(class_name)
-            return {
-                "path": path,
-                "path_type": "file",
-                "language": analyzer._language,
-                "class_name": class_name,
-                "count": len(fields),
-                "fields": [f.to_dict(include_file=False) for f in fields],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            fields = project.get_fields(class_name)
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "class_name": class_name,
-                "count": len(fields),
-                "fields": [f.to_dict(include_file=True) for f in fields],
-            }
+        project = ProjectAnalyzer(path)
+        fields = project.get_fields(class_name)
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "class_name": class_name,
+            "count": len(fields),
+            "fields": [f.to_dict(include_file=True) for f in fields],
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -269,32 +216,17 @@ def cmd_imports(args: argparse.Namespace) -> dict:
     try:
         path = os.path.realpath(args.path)
         query = args.query or ""
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            imports = analyzer.get_imports()
-            if query:
-                q = query.lower()
-                imports = [i for i in imports if q in i.module.lower()]
-            return {
-                "path": path,
-                "path_type": "file",
-                "language": analyzer._language,
-                "count": len(imports),
-                "imports": [i.to_dict(include_file=False) for i in imports],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            imports = project.get_imports()
-            if query:
-                q = query.lower()
-                imports = [i for i in imports if q in i.module.lower()]
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "count": len(imports),
-                "imports": [i.to_dict(include_file=True) for i in imports],
-            }
+        project = ProjectAnalyzer(path)
+        imports = project.get_imports()
+        if query:
+            q = query.lower()
+            imports = [i for i in imports if q in i.module.lower()]
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "count": len(imports),
+            "imports": [i.to_dict(include_file=True) for i in imports],
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -304,32 +236,17 @@ def cmd_variables(args: argparse.Namespace) -> dict:
     try:
         path = os.path.realpath(args.path)
         query = args.query or ""
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            variables = analyzer.get_variables()
-            if query:
-                q = query.lower()
-                variables = [v for v in variables if q in v.name.lower()]
-            return {
-                "path": path,
-                "path_type": "file",
-                "language": analyzer._language,
-                "count": len(variables),
-                "variables": [v.to_dict(include_file=False) for v in variables],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            variables = project.get_variables()
-            if query:
-                q = query.lower()
-                variables = [v for v in variables if q in v.name.lower()]
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "count": len(variables),
-                "variables": [v.to_dict(include_file=True) for v in variables],
-            }
+        project = ProjectAnalyzer(path)
+        variables = project.get_variables()
+        if query:
+            q = query.lower()
+            variables = [v for v in variables if q in v.name.lower()]
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "count": len(variables),
+            "variables": [v.to_dict(include_file=True) for v in variables],
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -340,30 +257,16 @@ def cmd_callers(args: argparse.Namespace) -> dict:
         path = os.path.realpath(args.path)
         function_name = args.function
         class_name = args.class_name
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            callers = analyzer.get_function_callers(function_name, class_name)
-            callers = sorted(callers, key=lambda x: x["line"])
-            return {
-                "path": path,
-                "path_type": "file",
-                "function": function_name,
-                "class_name": class_name,
-                "count": len(callers),
-                "callers": callers,
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            callers = project.get_callers(function_name, class_name)
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "function": function_name,
-                "class_name": class_name,
-                "count": len(callers),
-                "callers": callers,
-            }
+        project = ProjectAnalyzer(path)
+        callers = project.get_callers(function_name, class_name)
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "function": function_name,
+            "class_name": class_name,
+            "count": len(callers),
+            "callers": callers,
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -374,30 +277,16 @@ def cmd_callees(args: argparse.Namespace) -> dict:
         path = os.path.realpath(args.path)
         function_name = args.function
         class_name = args.class_name
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            callees = analyzer.get_function_callees(function_name, class_name)
-            callees = sorted(callees, key=lambda x: x["line"])
-            return {
-                "path": path,
-                "path_type": "file",
-                "function": function_name,
-                "class_name": class_name,
-                "count": len(callees),
-                "callees": callees,
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            callees = project.get_callees(function_name, class_name)
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "function": function_name,
-                "class_name": class_name,
-                "count": len(callees),
-                "callees": callees,
-            }
+        project = ProjectAnalyzer(path)
+        callees = project.get_callees(function_name, class_name)
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "function": function_name,
+            "class_name": class_name,
+            "count": len(callees),
+            "callees": callees,
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -407,27 +296,15 @@ def cmd_symbols(args: argparse.Namespace) -> dict:
     try:
         path = os.path.realpath(args.path)
         name = args.name
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            refs = analyzer.find_symbols(name)
-            return {
-                "path": path,
-                "path_type": "file",
-                "name": name,
-                "count": len(refs),
-                "references": refs,
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            refs = project.find_symbols(name)
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "name": name,
-                "count": len(refs),
-                "references": refs,
-            }
+        project = ProjectAnalyzer(path)
+        refs = project.find_symbols(name)
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "name": name,
+            "count": len(refs),
+            "references": refs,
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -438,31 +315,17 @@ def cmd_definition(args: argparse.Namespace) -> dict:
         path = os.path.realpath(args.path)
         function_name = args.function
         class_name = args.class_name
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            functions = analyzer.get_all_functions_by_name(function_name, class_name)
-            if not functions:
-                return {"error": f"Function '{function_name}' not found"}
-            return {
-                "path": path,
-                "path_type": "file",
-                "class_name": class_name,
-                "count": len(functions),
-                "functions": [f.to_dict() for f in functions],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            functions = project.get_all_functions_by_name(function_name, class_name)
-            if not functions:
-                return {"error": f"Function '{function_name}' not found"}
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "class_name": class_name,
-                "count": len(functions),
-                "functions": [f.to_dict() for f in functions],
-            }
+        project = ProjectAnalyzer(path)
+        functions = project.get_all_functions_by_name(function_name, class_name)
+        if not functions:
+            return {"error": f"Function '{function_name}' not found"}
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "class_name": class_name,
+            "count": len(functions),
+            "functions": [f.to_dict() for f in functions],
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -473,33 +336,19 @@ def cmd_function_variables(args: argparse.Namespace) -> dict:
         path = os.path.realpath(args.path)
         function_name = args.function
         class_name = args.class_name
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            variables = analyzer.get_function_variables(function_name, class_name)
-            variables = sorted(variables, key=lambda v: v.location.start_line)
-            return {
-                "path": path,
-                "path_type": "file",
-                "function": function_name,
-                "class_name": class_name,
-                "count": len(variables),
-                "variables": [v.to_dict() for v in variables],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            functions = project.get_all_functions_by_name(function_name, class_name)
-            if not functions:
-                return {"error": f"Function '{function_name}' not found"}
-            variables = project.get_function_variables(function_name, class_name)
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "function": function_name,
-                "class_name": class_name,
-                "count": len(variables),
-                "variables": variables,
-            }
+        project = ProjectAnalyzer(path)
+        functions = project.get_all_functions_by_name(function_name, class_name)
+        if not functions:
+            return {"error": f"Function '{function_name}' not found"}
+        variables = project.get_function_variables(function_name, class_name)
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "function": function_name,
+            "class_name": class_name,
+            "count": len(variables),
+            "variables": variables,
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -510,32 +359,18 @@ def cmd_function_strings(args: argparse.Namespace) -> dict:
         path = os.path.realpath(args.path)
         function_name = args.function
         class_name = args.class_name
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            strings = analyzer.get_function_strings(function_name, class_name)
-            strings = sorted(strings, key=lambda s: s.location.start_line)
-            return {
-                "path": path,
-                "path_type": "file",
-                "function": function_name,
-                "class_name": class_name,
-                "count": len(strings),
-                "strings": [s.to_dict() for s in strings],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            strings = project.get_function_strings(function_name, class_name)
-            if not strings:
-                return {"error": f"Function '{function_name}' not found"}
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "function": function_name,
-                "class_name": class_name,
-                "count": len(strings),
-                "strings": strings,
-            }
+        project = ProjectAnalyzer(path)
+        strings = project.get_function_strings(function_name, class_name)
+        if not strings:
+            return {"error": f"Function '{function_name}' not found"}
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "function": function_name,
+            "class_name": class_name,
+            "count": len(strings),
+            "strings": strings,
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -545,28 +380,15 @@ def cmd_super_classes(args: argparse.Namespace) -> dict:
     try:
         path = os.path.realpath(args.path)
         class_name = args.class_name
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            super_classes = analyzer.get_super_classes(class_name)
-            return {
-                "path": path,
-                "path_type": "file",
-                "language": analyzer._language,
-                "class_name": class_name,
-                "count": len(super_classes),
-                "super_classes": [c.to_dict(include_file=False) for c in super_classes],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            super_classes = project.get_super_classes(class_name)
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "class_name": class_name,
-                "count": len(super_classes),
-                "super_classes": [c.to_dict(include_file=True) for c in super_classes],
-            }
+        project = ProjectAnalyzer(path)
+        super_classes = project.get_super_classes(class_name)
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "class_name": class_name,
+            "count": len(super_classes),
+            "super_classes": [c.to_dict(include_file=True) for c in super_classes],
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -576,28 +398,15 @@ def cmd_sub_classes(args: argparse.Namespace) -> dict:
     try:
         path = os.path.realpath(args.path)
         class_name = args.class_name
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            sub_classes = analyzer.get_sub_classes(class_name)
-            return {
-                "path": path,
-                "path_type": "file",
-                "language": analyzer._language,
-                "class_name": class_name,
-                "count": len(sub_classes),
-                "sub_classes": [c.to_dict(include_file=False) for c in sub_classes],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            sub_classes = project.get_sub_classes(class_name)
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "class_name": class_name,
-                "count": len(sub_classes),
-                "sub_classes": [c.to_dict(include_file=True) for c in sub_classes],
-            }
+        project = ProjectAnalyzer(path)
+        sub_classes = project.get_sub_classes(class_name)
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "class_name": class_name,
+            "count": len(sub_classes),
+            "sub_classes": [c.to_dict(include_file=True) for c in sub_classes],
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -610,17 +419,17 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # List all functions in a file
-  tree-sitter-analyzer functions ./src/main.py
-
   # List all classes in a directory
   tree-sitter-analyzer classes ./src/
+
+  # List all functions using glob pattern
+  tree-sitter-analyzer functions "**/*.py"
 
   # Find all callers of a function
   tree-sitter-analyzer callers ./src/ --function process_data
 
   # Get function definition with body
-  tree-sitter-analyzer definition ./src/main.py --function main
+  tree-sitter-analyzer definition ./src/ --function main
 
   # Output as JSON
   tree-sitter-analyzer functions ./src/ --json
@@ -643,7 +452,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
 
     # functions command
     p_functions = subparsers.add_parser("functions", help="Extract all function/method definitions")
-    p_functions.add_argument("path", help="File path, glob pattern, or directory")
+    p_functions.add_argument("path", help="Glob pattern or directory")
     p_functions.add_argument("-q", "--query", help="Filter by function name (fuzzy match)")
     p_functions.add_argument("--body", action="store_true", help="Include function body")
     add_format_args(p_functions)
@@ -653,28 +462,28 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_classes = subparsers.add_parser(
         "classes", help="Extract all class/struct/interface definitions"
     )
-    p_classes.add_argument("path", help="File path, glob pattern, or directory")
+    p_classes.add_argument("path", help="Glob pattern or directory")
     p_classes.add_argument("-q", "--query", help="Filter by class name (fuzzy match)")
     add_format_args(p_classes)
     p_classes.set_defaults(func=cmd_classes)
 
     # fields command
     p_fields = subparsers.add_parser("fields", help="Get all fields of a specific class")
-    p_fields.add_argument("path", help="File path, glob pattern, or directory")
+    p_fields.add_argument("path", help="Glob pattern or directory")
     p_fields.add_argument("-c", "--class-name", required=True, help="Class name to get fields for")
     add_format_args(p_fields)
     p_fields.set_defaults(func=cmd_fields)
 
     # imports command
     p_imports = subparsers.add_parser("imports", help="Extract all import statements")
-    p_imports.add_argument("path", help="File path, glob pattern, or directory")
+    p_imports.add_argument("path", help="Glob pattern or directory")
     p_imports.add_argument("-q", "--query", help="Filter by module name (fuzzy match)")
     add_format_args(p_imports)
     p_imports.set_defaults(func=cmd_imports)
 
     # variables command
     p_variables = subparsers.add_parser("variables", help="Extract all variable declarations")
-    p_variables.add_argument("path", help="File path, glob pattern, or directory")
+    p_variables.add_argument("path", help="Glob pattern or directory")
     p_variables.add_argument("-q", "--query", help="Filter by variable name (fuzzy match)")
     add_format_args(p_variables)
     p_variables.set_defaults(func=cmd_variables)
@@ -683,7 +492,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_callers = subparsers.add_parser(
         "callers", help="Find functions that call a specific function"
     )
-    p_callers.add_argument("path", help="File path, glob pattern, or directory")
+    p_callers.add_argument("path", help="Glob pattern or directory")
     p_callers.add_argument(
         "-f", "--function", required=True, help="Function name to find callers for"
     )
@@ -695,7 +504,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_callees = subparsers.add_parser(
         "callees", help="Find functions called by a specific function"
     )
-    p_callees.add_argument("path", help="File path, glob pattern, or directory")
+    p_callees.add_argument("path", help="Glob pattern or directory")
     p_callees.add_argument(
         "-f", "--function", required=True, help="Function name to find callees for"
     )
@@ -707,7 +516,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_symbols = subparsers.add_parser(
         "symbols", help="Find all references to a specific identifier"
     )
-    p_symbols.add_argument("path", help="File path, glob pattern, or directory")
+    p_symbols.add_argument("path", help="Glob pattern or directory")
     p_symbols.add_argument("-n", "--name", required=True, help="Identifier name to search for")
     add_format_args(p_symbols)
     p_symbols.set_defaults(func=cmd_symbols)
@@ -716,7 +525,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_definition = subparsers.add_parser(
         "definition", help="Get the complete source code of a function"
     )
-    p_definition.add_argument("path", help="File path, glob pattern, or directory")
+    p_definition.add_argument("path", help="Glob pattern or directory")
     p_definition.add_argument("-f", "--function", required=True, help="Function name to retrieve")
     p_definition.add_argument("-c", "--class-name", help="Class name to filter methods")
     add_format_args(p_definition)
@@ -726,7 +535,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_func_vars = subparsers.add_parser(
         "function-variables", help="Get all variables declared in a function"
     )
-    p_func_vars.add_argument("path", help="File path, glob pattern, or directory")
+    p_func_vars.add_argument("path", help="Glob pattern or directory")
     p_func_vars.add_argument("-f", "--function", required=True, help="Function name to analyze")
     p_func_vars.add_argument("-c", "--class-name", help="Class name to filter methods")
     add_format_args(p_func_vars)
@@ -736,7 +545,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_func_strings = subparsers.add_parser(
         "function-strings", help="Get all string literals in a function"
     )
-    p_func_strings.add_argument("path", help="File path, glob pattern, or directory")
+    p_func_strings.add_argument("path", help="Glob pattern or directory")
     p_func_strings.add_argument("-f", "--function", required=True, help="Function name to analyze")
     p_func_strings.add_argument("-c", "--class-name", help="Class name to filter methods")
     add_format_args(p_func_strings)
@@ -746,7 +555,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_super = subparsers.add_parser(
         "super-classes", help="Get all parent classes of a specific class"
     )
-    p_super.add_argument("path", help="File path, glob pattern, or directory")
+    p_super.add_argument("path", help="Glob pattern or directory")
     p_super.add_argument("-c", "--class-name", required=True, help="Class name to find parents for")
     add_format_args(p_super)
     p_super.set_defaults(func=cmd_super_classes)
@@ -755,7 +564,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_sub = subparsers.add_parser(
         "sub-classes", help="Get all child classes that inherit from a class"
     )
-    p_sub.add_argument("path", help="File path, glob pattern, or directory")
+    p_sub.add_argument("path", help="Glob pattern or directory")
     p_sub.add_argument("-c", "--class-name", required=True, help="Class name to find children for")
     add_format_args(p_sub)
     p_sub.set_defaults(func=cmd_sub_classes)

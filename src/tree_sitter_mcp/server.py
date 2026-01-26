@@ -6,27 +6,20 @@ import os
 
 from fastmcp import FastMCP
 
-from .analyzer import CodeAnalyzer
-from .project import PathType, ProjectAnalyzer, detect_path_type
+from .project import ProjectAnalyzer
 
 mcp = FastMCP(
     name="tree-sitter-mcp",
     instructions="""
     Tree-sitter MCP Server for code analysis.
-    Provides function/class/field extraction, call graph analysis, inheritance analysis, and code structure analysis.
+    Provides function/class extraction, call graph analysis, inheritance analysis, and code structure analysis.
     Supported languages: Python, JavaScript, Java, Go
 
     Path parameter supports:
-    - Single file: /path/to/file.py
     - Glob pattern: **/*.py, src/**/*.js
     - Directory: /path/to/project (searches all supported files recursively)
     """,
 )
-
-
-def _is_single_file(path: str) -> bool:
-    """Check if path refers to a single file."""
-    return detect_path_type(path) == PathType.FILE
 
 
 @mcp.tool
@@ -34,37 +27,22 @@ def get_functions(path: str, query: str = "") -> dict:
     """Extract all function/method definitions.
 
     Args:
-        path: File path, glob pattern (e.g., **/*.py), or directory path
+        path: Glob pattern (e.g., **/*.py) or directory path
         query: Optional filter string for fuzzy matching function/method names (contains match)
     """
     try:
         path = os.path.realpath(path)
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            functions = analyzer.get_functions()
-            if query:
-                q = query.lower()
-                functions = [f for f in functions if q in f.name.lower()]
-            return {
-                "path": path,
-                "path_type": "file",
-                "language": analyzer._language,
-                "count": len(functions),
-                "functions": [f.to_dict(include_body=False, include_file=False) for f in functions],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            functions = project.get_functions()
-            if query:
-                q = query.lower()
-                functions = [f for f in functions if q in f.name.lower()]
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "count": len(functions),
-                "functions": [f.to_dict(include_body=False, include_file=True) for f in functions],
-            }
+        project = ProjectAnalyzer(path)
+        functions = project.get_functions()
+        if query:
+            q = query.lower()
+            functions = [f for f in functions if q in f.name.lower()]
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "count": len(functions),
+            "functions": [f.to_dict(include_body=False, include_file=True) for f in functions],
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -74,37 +52,22 @@ def get_classes(path: str, query: str = "") -> dict:
     """Extract all class/struct/interface definitions.
 
     Args:
-        path: File path, glob pattern (e.g., **/*.py), or directory path
+        path: Glob pattern (e.g., **/*.py) or directory path
         query: Optional filter string for fuzzy matching class names (contains match)
     """
     try:
         path = os.path.realpath(path)
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            classes = analyzer.get_classes()
-            if query:
-                q = query.lower()
-                classes = [c for c in classes if q in c.name.lower()]
-            return {
-                "path": path,
-                "path_type": "file",
-                "language": analyzer._language,
-                "count": len(classes),
-                "classes": [c.to_dict(include_file=False) for c in classes],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            classes = project.get_classes()
-            if query:
-                q = query.lower()
-                classes = [c for c in classes if q in c.name.lower()]
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "count": len(classes),
-                "classes": [c.to_dict(include_file=True) for c in classes],
-            }
+        project = ProjectAnalyzer(path)
+        classes = project.get_classes()
+        if query:
+            q = query.lower()
+            classes = [c for c in classes if q in c.name.lower()]
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "count": len(classes),
+            "classes": [c.to_dict(include_file=True) for c in classes],
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -114,33 +77,20 @@ def get_fields(path: str, class_name: str) -> dict:
     """Get all fields of a specific class.
 
     Args:
-        path: File path, glob pattern (e.g., **/*.py), or directory path
+        path: Glob pattern (e.g., **/*.py) or directory path
         class_name: Name of the class to get fields for
     """
     try:
         path = os.path.realpath(path)
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            fields = analyzer.get_fields(class_name)
-            return {
-                "path": path,
-                "path_type": "file",
-                "language": analyzer._language,
-                "class_name": class_name,
-                "count": len(fields),
-                "fields": [f.to_dict(include_file=False) for f in fields],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            fields = project.get_fields(class_name)
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "class_name": class_name,
-                "count": len(fields),
-                "fields": [f.to_dict(include_file=True) for f in fields],
-            }
+        project = ProjectAnalyzer(path)
+        fields = project.get_fields(class_name)
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "class_name": class_name,
+            "count": len(fields),
+            "fields": [f.to_dict(include_file=True) for f in fields],
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -150,37 +100,22 @@ def get_imports(path: str, query: str = "") -> dict:
     """Extract all import statements.
 
     Args:
-        path: File path, glob pattern (e.g., **/*.py), or directory path
+        path: Glob pattern (e.g., **/*.py) or directory path
         query: Optional filter string for fuzzy matching module names (contains match)
     """
     try:
         path = os.path.realpath(path)
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            imports = analyzer.get_imports()
-            if query:
-                q = query.lower()
-                imports = [i for i in imports if q in i.module.lower()]
-            return {
-                "path": path,
-                "path_type": "file",
-                "language": analyzer._language,
-                "count": len(imports),
-                "imports": [i.to_dict(include_file=False) for i in imports],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            imports = project.get_imports()
-            if query:
-                q = query.lower()
-                imports = [i for i in imports if q in i.module.lower()]
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "count": len(imports),
-                "imports": [i.to_dict(include_file=True) for i in imports],
-            }
+        project = ProjectAnalyzer(path)
+        imports = project.get_imports()
+        if query:
+            q = query.lower()
+            imports = [i for i in imports if q in i.module.lower()]
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "count": len(imports),
+            "imports": [i.to_dict(include_file=True) for i in imports],
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -190,37 +125,22 @@ def get_variables(path: str, query: str = "") -> dict:
     """Extract all variable declarations.
 
     Args:
-        path: File path, glob pattern (e.g., **/*.py), or directory path
+        path: Glob pattern (e.g., **/*.py) or directory path
         query: Optional filter string for fuzzy matching variable names (contains match)
     """
     try:
         path = os.path.realpath(path)
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            variables = analyzer.get_variables()
-            if query:
-                q = query.lower()
-                variables = [v for v in variables if q in v.name.lower()]
-            return {
-                "path": path,
-                "path_type": "file",
-                "language": analyzer._language,
-                "count": len(variables),
-                "variables": [v.to_dict(include_file=False) for v in variables],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            variables = project.get_variables()
-            if query:
-                q = query.lower()
-                variables = [v for v in variables if q in v.name.lower()]
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "count": len(variables),
-                "variables": [v.to_dict(include_file=True) for v in variables],
-            }
+        project = ProjectAnalyzer(path)
+        variables = project.get_variables()
+        if query:
+            q = query.lower()
+            variables = [v for v in variables if q in v.name.lower()]
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "count": len(variables),
+            "variables": [v.to_dict(include_file=True) for v in variables],
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -230,34 +150,21 @@ def get_callers(path: str, function_name: str, class_name: str | None = None) ->
     """Find all functions that call a specific function.
 
     Args:
-        path: File path, glob pattern (e.g., **/*.py), or directory path
+        path: Glob pattern (e.g., **/*.py) or directory path
         function_name: Name of the function to find callers for
         class_name: Optional class name to filter methods (if None, returns all matches)
     """
     try:
         path = os.path.realpath(path)
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            callers = analyzer.get_function_callers(function_name, class_name)
-            callers = sorted(callers, key=lambda x: x["line"])
-            return {
-                "path": path,
-                "path_type": "file",
-                "function": function_name,
-                "class_name": class_name,
-                "callers": callers,
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            callers = project.get_callers(function_name, class_name)
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "function": function_name,
-                "class_name": class_name,
-                "callers": callers,
-            }
+        project = ProjectAnalyzer(path)
+        callers = project.get_callers(function_name, class_name)
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "function": function_name,
+            "class_name": class_name,
+            "callers": callers,
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -267,34 +174,21 @@ def get_callees(path: str, function_name: str, class_name: str | None = None) ->
     """Find all functions called by a specific function.
 
     Args:
-        path: File path, glob pattern (e.g., **/*.py), or directory path
+        path: Glob pattern (e.g., **/*.py) or directory path
         function_name: Name of the function to find callees for
         class_name: Optional class name to filter methods (if None, returns all matches)
     """
     try:
         path = os.path.realpath(path)
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            callees = analyzer.get_function_callees(function_name, class_name)
-            callees = sorted(callees, key=lambda x: x["line"])
-            return {
-                "path": path,
-                "path_type": "file",
-                "function": function_name,
-                "class_name": class_name,
-                "callees": callees,
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            callees = project.get_callees(function_name, class_name)
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "function": function_name,
-                "class_name": class_name,
-                "callees": callees,
-            }
+        project = ProjectAnalyzer(path)
+        callees = project.get_callees(function_name, class_name)
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "function": function_name,
+            "class_name": class_name,
+            "callees": callees,
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -304,32 +198,20 @@ def find_symbols(path: str, name: str) -> dict:
     """Find all references to a specific identifier.
 
     Args:
-        path: File path, glob pattern (e.g., **/*.py), or directory path
+        path: Glob pattern (e.g., **/*.py) or directory path
         name: Identifier name to search for
     """
     try:
         path = os.path.realpath(path)
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            refs = analyzer.find_symbols(name)
-            return {
-                "path": path,
-                "path_type": "file",
-                "name": name,
-                "count": len(refs),
-                "references": refs,
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            refs = project.find_symbols(name)
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "name": name,
-                "count": len(refs),
-                "references": refs,
-            }
+        project = ProjectAnalyzer(path)
+        refs = project.find_symbols(name)
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "name": name,
+            "count": len(refs),
+            "references": refs,
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -339,37 +221,23 @@ def get_function_definition(path: str, function_name: str, class_name: str | Non
     """Get the complete definition (source code) of a specific function.
 
     Args:
-        path: File path, glob pattern (e.g., **/*.py), or directory path
+        path: Glob pattern (e.g., **/*.py) or directory path
         function_name: Name of the function to retrieve
         class_name: Optional class name to filter methods (if None, returns all matches)
     """
     try:
         path = os.path.realpath(path)
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            functions = analyzer.get_all_functions_by_name(function_name, class_name)
-            if not functions:
-                return {"error": f"Function '{function_name}' not found"}
-            return {
-                "path": path,
-                "path_type": "file",
-                "class_name": class_name,
-                "count": len(functions),
-                "functions": [f.to_dict() for f in functions],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            functions = project.get_all_functions_by_name(function_name, class_name)
-            if not functions:
-                return {"error": f"Function '{function_name}' not found"}
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "class_name": class_name,
-                "count": len(functions),
-                "functions": [f.to_dict() for f in functions],
-            }
+        project = ProjectAnalyzer(path)
+        functions = project.get_all_functions_by_name(function_name, class_name)
+        if not functions:
+            return {"error": f"Function '{function_name}' not found"}
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "class_name": class_name,
+            "count": len(functions),
+            "functions": [f.to_dict() for f in functions],
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -379,39 +247,25 @@ def get_function_variables(path: str, function_name: str, class_name: str | None
     """Get all variables declared within a specific function.
 
     Args:
-        path: File path, glob pattern (e.g., **/*.py), or directory path
+        path: Glob pattern (e.g., **/*.py) or directory path
         function_name: Name of the function to analyze
         class_name: Optional class name to filter methods (if None, returns all matches)
     """
     try:
         path = os.path.realpath(path)
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            variables = analyzer.get_function_variables(function_name, class_name)
-            variables = sorted(variables, key=lambda v: v.location.start_line)
-            return {
-                "path": path,
-                "path_type": "file",
-                "function": function_name,
-                "class_name": class_name,
-                "count": len(variables),
-                "variables": [v.to_dict() for v in variables],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            functions = project.get_all_functions_by_name(function_name, class_name)
-            if not functions:
-                return {"error": f"Function '{function_name}' not found"}
-            variables = project.get_function_variables(function_name, class_name)
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "function": function_name,
-                "class_name": class_name,
-                "count": len(variables),
-                "variables": variables,
-            }
+        project = ProjectAnalyzer(path)
+        functions = project.get_all_functions_by_name(function_name, class_name)
+        if not functions:
+            return {"error": f"Function '{function_name}' not found"}
+        variables = project.get_function_variables(function_name, class_name)
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "function": function_name,
+            "class_name": class_name,
+            "count": len(variables),
+            "variables": variables,
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -421,38 +275,24 @@ def get_function_strings(path: str, function_name: str, class_name: str | None =
     """Get all string literals within a specific function.
 
     Args:
-        path: File path, glob pattern (e.g., **/*.py), or directory path
+        path: Glob pattern (e.g., **/*.py) or directory path
         function_name: Name of the function to analyze
         class_name: Optional class name to filter methods (if None, returns all matches)
     """
     try:
         path = os.path.realpath(path)
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            strings = analyzer.get_function_strings(function_name, class_name)
-            strings = sorted(strings, key=lambda s: s.location.start_line)
-            return {
-                "path": path,
-                "path_type": "file",
-                "function": function_name,
-                "class_name": class_name,
-                "count": len(strings),
-                "strings": [s.to_dict() for s in strings],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            strings = project.get_function_strings(function_name, class_name)
-            if not strings:
-                return {"error": f"Function '{function_name}' not found"}
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "function": function_name,
-                "class_name": class_name,
-                "count": len(strings),
-                "strings": strings,
-            }
+        project = ProjectAnalyzer(path)
+        strings = project.get_function_strings(function_name, class_name)
+        if not strings:
+            return {"error": f"Function '{function_name}' not found"}
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "function": function_name,
+            "class_name": class_name,
+            "count": len(strings),
+            "strings": strings,
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -462,33 +302,20 @@ def get_super_classes(path: str, class_name: str) -> dict:
     """Get all parent classes (superclasses) of a specific class.
 
     Args:
-        path: File path, glob pattern (e.g., **/*.py), or directory path
+        path: Glob pattern (e.g., **/*.py) or directory path
         class_name: Name of the class to find parent classes for
     """
     try:
         path = os.path.realpath(path)
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            super_classes = analyzer.get_super_classes(class_name)
-            return {
-                "path": path,
-                "path_type": "file",
-                "language": analyzer._language,
-                "class_name": class_name,
-                "count": len(super_classes),
-                "super_classes": [c.to_dict(include_file=False) for c in super_classes],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            super_classes = project.get_super_classes(class_name)
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "class_name": class_name,
-                "count": len(super_classes),
-                "super_classes": [c.to_dict(include_file=True) for c in super_classes],
-            }
+        project = ProjectAnalyzer(path)
+        super_classes = project.get_super_classes(class_name)
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "class_name": class_name,
+            "count": len(super_classes),
+            "super_classes": [c.to_dict(include_file=True) for c in super_classes],
+        }
     except Exception as e:
         return {"error": str(e)}
 
@@ -498,33 +325,20 @@ def get_sub_classes(path: str, class_name: str) -> dict:
     """Get all child classes (subclasses) that inherit from a specific class.
 
     Args:
-        path: File path, glob pattern (e.g., **/*.py), or directory path
+        path: Glob pattern (e.g., **/*.py) or directory path
         class_name: Name of the class to find child classes for
     """
     try:
         path = os.path.realpath(path)
-        if _is_single_file(path):
-            analyzer = CodeAnalyzer(path)
-            sub_classes = analyzer.get_sub_classes(class_name)
-            return {
-                "path": path,
-                "path_type": "file",
-                "language": analyzer._language,
-                "class_name": class_name,
-                "count": len(sub_classes),
-                "sub_classes": [c.to_dict(include_file=False) for c in sub_classes],
-            }
-        else:
-            project = ProjectAnalyzer(path)
-            sub_classes = project.get_sub_classes(class_name)
-            return {
-                "path": path,
-                "path_type": project.path_type,
-                "files_searched": len(project.files),
-                "class_name": class_name,
-                "count": len(sub_classes),
-                "sub_classes": [c.to_dict(include_file=True) for c in sub_classes],
-            }
+        project = ProjectAnalyzer(path)
+        sub_classes = project.get_sub_classes(class_name)
+        return {
+            "path": path,
+            "files_searched": len(project.files),
+            "class_name": class_name,
+            "count": len(sub_classes),
+            "sub_classes": [c.to_dict(include_file=True) for c in sub_classes],
+        }
     except Exception as e:
         return {"error": str(e)}
 
