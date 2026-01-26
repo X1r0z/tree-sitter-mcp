@@ -14,18 +14,11 @@ pip install git+https://github.com/X1r0z/tree-sitter-mcp
 
 After installation, the `tree-sitter-analyzer` command will be available.
 
-## Usage
+## Basic Usage
 
 ```bash
 tree-sitter-analyzer <command> <path> [options]
 ```
-
-### Path Types
-
-All commands accept a `path` argument that supports:
-
-- **Glob pattern**: `**/*.py`, `src/**/*.js`
-- **Directory**: `/path/to/project` (searches all supported files recursively)
 
 ### Supported Languages
 
@@ -59,7 +52,7 @@ tree-sitter-analyzer functions ./src/ --yaml
 
 ## Commands
 
-### Code Structure Commands
+### Code Structure
 
 #### `functions` - Extract Function Definitions
 
@@ -74,14 +67,9 @@ tree-sitter-analyzer functions <path> [-q QUERY] [--body] [--json] [--yaml]
 | `-q, --query` | Filter by function name (fuzzy match) |
 | `--body` | Include function body in output |
 
-**Examples:**
-
 ```bash
 # List all functions in a directory
 tree-sitter-analyzer functions ./src/
-
-# List all functions using glob pattern
-tree-sitter-analyzer functions "**/*.py"
 
 # Filter functions containing "get"
 tree-sitter-analyzer functions ./src/ -q get
@@ -108,8 +96,6 @@ tree-sitter-analyzer classes <path> [-q QUERY] [--json] [--yaml]
 |--------|-------------|
 | `-q, --query` | Filter by class name (fuzzy match) |
 
-**Examples:**
-
 ```bash
 # List all classes in a directory
 tree-sitter-analyzer classes ./src/
@@ -129,8 +115,6 @@ tree-sitter-analyzer fields <path> -c CLASS_NAME [--json] [--yaml]
 | Option | Description |
 |--------|-------------|
 | `-c, --class-name` | Class name to get fields for (required) |
-
-**Examples:**
 
 ```bash
 # Get fields of a class
@@ -152,8 +136,6 @@ tree-sitter-analyzer imports <path> [-q QUERY] [--json] [--yaml]
 |--------|-------------|
 | `-q, --query` | Filter by module name (fuzzy match) |
 
-**Examples:**
-
 ```bash
 # List all imports in a directory
 tree-sitter-analyzer imports ./src/
@@ -174,8 +156,6 @@ tree-sitter-analyzer variables <path> [-q QUERY] [--json] [--yaml]
 |--------|-------------|
 | `-q, --query` | Filter by variable name (fuzzy match) |
 
-**Examples:**
-
 ```bash
 # List all variables in a directory
 tree-sitter-analyzer variables ./src/
@@ -184,7 +164,7 @@ tree-sitter-analyzer variables ./src/
 tree-sitter-analyzer variables ./src/ -q config
 ```
 
-### Inheritance Analysis Commands
+### Inheritance Analysis
 
 #### `super-classes` - Get Parent Classes
 
@@ -197,8 +177,6 @@ tree-sitter-analyzer super-classes <path> -c CLASS_NAME [--json] [--yaml]
 | Option | Description |
 |--------|-------------|
 | `-c, --class-name` | Class name to find parents for (required) |
-
-**Examples:**
 
 ```bash
 # Find parent classes
@@ -217,14 +195,12 @@ tree-sitter-analyzer sub-classes <path> -c CLASS_NAME [--json] [--yaml]
 |--------|-------------|
 | `-c, --class-name` | Class name to find children for (required) |
 
-**Examples:**
-
 ```bash
 # Find child classes across a project
 tree-sitter-analyzer sub-classes ./src/ -c BaseModel
 ```
 
-### Call Graph Analysis Commands
+### Call Graph Analysis
 
 #### `callers` - Find Function Callers
 
@@ -238,8 +214,6 @@ tree-sitter-analyzer callers <path> -f FUNCTION [-c CLASS_NAME] [--json] [--yaml
 |--------|-------------|
 | `-f, --function` | Function name to find callers for (required) |
 | `-c, --class-name` | Class name to filter methods |
-
-**Examples:**
 
 ```bash
 # Find all callers of a function
@@ -262,8 +236,6 @@ tree-sitter-analyzer callees <path> -f FUNCTION [-c CLASS_NAME] [--json] [--yaml
 | `-f, --function` | Function name to find callees for (required) |
 | `-c, --class-name` | Class name to filter methods |
 
-**Examples:**
-
 ```bash
 # Find all functions called by main
 tree-sitter-analyzer callees ./src/ -f main
@@ -272,7 +244,7 @@ tree-sitter-analyzer callees ./src/ -f main
 tree-sitter-analyzer callees ./src/ -f initialize -c Application
 ```
 
-### Function-Level Analysis Commands
+### Function-Level Analysis
 
 #### `definition` - Get Function Source Code
 
@@ -286,8 +258,6 @@ tree-sitter-analyzer definition <path> -f FUNCTION [-c CLASS_NAME] [--json] [--y
 |--------|-------------|
 | `-f, --function` | Function name to retrieve (required) |
 | `-c, --class-name` | Class name to filter methods |
-
-**Examples:**
 
 ```bash
 # Get function definition
@@ -310,8 +280,6 @@ tree-sitter-analyzer function-variables <path> -f FUNCTION [-c CLASS_NAME] [--js
 | `-f, --function` | Function name to analyze (required) |
 | `-c, --class-name` | Class name to filter methods |
 
-**Examples:**
-
 ```bash
 # Get variables in a function
 tree-sitter-analyzer function-variables ./src/ -f process_request
@@ -330,14 +298,12 @@ tree-sitter-analyzer function-strings <path> -f FUNCTION [-c CLASS_NAME] [--json
 | `-f, --function` | Function name to analyze (required) |
 | `-c, --class-name` | Class name to filter methods |
 
-**Examples:**
-
 ```bash
 # Get string literals in a function
 tree-sitter-analyzer function-strings ./src/ -f handle_request
 ```
 
-### Symbol Reference Commands
+### Symbol Reference Tracking
 
 #### `symbols` - Find Symbol References
 
@@ -351,19 +317,7 @@ tree-sitter-analyzer symbols <path> -n NAME [--json] [--yaml]
 |--------|-------------|
 | `-n, --name` | Identifier name to search for (required) |
 
-**Examples:**
-
 ```bash
 # Find all references to a symbol
 tree-sitter-analyzer symbols ./src/ -n CONFIG_PATH
-
-# Find references using glob pattern
-tree-sitter-analyzer symbols "**/*.py" -n logger
 ```
-
-## Exit Codes
-
-| Code | Description |
-|------|-------------|
-| 0 | Success |
-| 1 | Error (check stderr for details) |

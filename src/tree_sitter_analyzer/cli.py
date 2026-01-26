@@ -165,9 +165,7 @@ def cmd_functions(args: argparse.Namespace) -> dict:
             "path": path,
             "files_searched": len(project.files),
             "count": len(functions),
-            "functions": [
-                f.to_dict(include_body=args.body, include_file=True) for f in functions
-            ],
+            "functions": [f.to_dict(include_body=args.body, include_file=True) for f in functions],
         }
     except Exception as e:
         return {"error": str(e)}
@@ -422,8 +420,8 @@ Examples:
   # List all classes in a directory
   tree-sitter-analyzer classes ./src/
 
-  # List all functions using glob pattern
-  tree-sitter-analyzer functions "**/*.py"
+  # List all functions in a directory
+  tree-sitter-analyzer functions ./src/
 
   # Find all callers of a function
   tree-sitter-analyzer callers ./src/ --function process_data
@@ -452,7 +450,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
 
     # functions command
     p_functions = subparsers.add_parser("functions", help="Extract all function/method definitions")
-    p_functions.add_argument("path", help="Glob pattern or directory")
+    p_functions.add_argument("path", help="Directory path")
     p_functions.add_argument("-q", "--query", help="Filter by function name (fuzzy match)")
     p_functions.add_argument("--body", action="store_true", help="Include function body")
     add_format_args(p_functions)
@@ -462,28 +460,28 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_classes = subparsers.add_parser(
         "classes", help="Extract all class/struct/interface definitions"
     )
-    p_classes.add_argument("path", help="Glob pattern or directory")
+    p_classes.add_argument("path", help="Directory path")
     p_classes.add_argument("-q", "--query", help="Filter by class name (fuzzy match)")
     add_format_args(p_classes)
     p_classes.set_defaults(func=cmd_classes)
 
     # fields command
     p_fields = subparsers.add_parser("fields", help="Get all fields of a specific class")
-    p_fields.add_argument("path", help="Glob pattern or directory")
+    p_fields.add_argument("path", help="Directory path")
     p_fields.add_argument("-c", "--class-name", required=True, help="Class name to get fields for")
     add_format_args(p_fields)
     p_fields.set_defaults(func=cmd_fields)
 
     # imports command
     p_imports = subparsers.add_parser("imports", help="Extract all import statements")
-    p_imports.add_argument("path", help="Glob pattern or directory")
+    p_imports.add_argument("path", help="Directory path")
     p_imports.add_argument("-q", "--query", help="Filter by module name (fuzzy match)")
     add_format_args(p_imports)
     p_imports.set_defaults(func=cmd_imports)
 
     # variables command
     p_variables = subparsers.add_parser("variables", help="Extract all variable declarations")
-    p_variables.add_argument("path", help="Glob pattern or directory")
+    p_variables.add_argument("path", help="Directory path")
     p_variables.add_argument("-q", "--query", help="Filter by variable name (fuzzy match)")
     add_format_args(p_variables)
     p_variables.set_defaults(func=cmd_variables)
@@ -492,7 +490,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_callers = subparsers.add_parser(
         "callers", help="Find functions that call a specific function"
     )
-    p_callers.add_argument("path", help="Glob pattern or directory")
+    p_callers.add_argument("path", help="Directory path")
     p_callers.add_argument(
         "-f", "--function", required=True, help="Function name to find callers for"
     )
@@ -504,7 +502,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_callees = subparsers.add_parser(
         "callees", help="Find functions called by a specific function"
     )
-    p_callees.add_argument("path", help="Glob pattern or directory")
+    p_callees.add_argument("path", help="Directory path")
     p_callees.add_argument(
         "-f", "--function", required=True, help="Function name to find callees for"
     )
@@ -516,7 +514,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_symbols = subparsers.add_parser(
         "symbols", help="Find all references to a specific identifier"
     )
-    p_symbols.add_argument("path", help="Glob pattern or directory")
+    p_symbols.add_argument("path", help="Directory path")
     p_symbols.add_argument("-n", "--name", required=True, help="Identifier name to search for")
     add_format_args(p_symbols)
     p_symbols.set_defaults(func=cmd_symbols)
@@ -525,7 +523,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_definition = subparsers.add_parser(
         "definition", help="Get the complete source code of a function"
     )
-    p_definition.add_argument("path", help="Glob pattern or directory")
+    p_definition.add_argument("path", help="Directory path")
     p_definition.add_argument("-f", "--function", required=True, help="Function name to retrieve")
     p_definition.add_argument("-c", "--class-name", help="Class name to filter methods")
     add_format_args(p_definition)
@@ -535,7 +533,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_func_vars = subparsers.add_parser(
         "function-variables", help="Get all variables declared in a function"
     )
-    p_func_vars.add_argument("path", help="Glob pattern or directory")
+    p_func_vars.add_argument("path", help="Directory path")
     p_func_vars.add_argument("-f", "--function", required=True, help="Function name to analyze")
     p_func_vars.add_argument("-c", "--class-name", help="Class name to filter methods")
     add_format_args(p_func_vars)
@@ -545,7 +543,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_func_strings = subparsers.add_parser(
         "function-strings", help="Get all string literals in a function"
     )
-    p_func_strings.add_argument("path", help="Glob pattern or directory")
+    p_func_strings.add_argument("path", help="Directory path")
     p_func_strings.add_argument("-f", "--function", required=True, help="Function name to analyze")
     p_func_strings.add_argument("-c", "--class-name", help="Class name to filter methods")
     add_format_args(p_func_strings)
@@ -555,7 +553,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_super = subparsers.add_parser(
         "super-classes", help="Get all parent classes of a specific class"
     )
-    p_super.add_argument("path", help="Glob pattern or directory")
+    p_super.add_argument("path", help="Directory path")
     p_super.add_argument("-c", "--class-name", required=True, help="Class name to find parents for")
     add_format_args(p_super)
     p_super.set_defaults(func=cmd_super_classes)
@@ -564,7 +562,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_sub = subparsers.add_parser(
         "sub-classes", help="Get all child classes that inherit from a class"
     )
-    p_sub.add_argument("path", help="Glob pattern or directory")
+    p_sub.add_argument("path", help="Directory path")
     p_sub.add_argument("-c", "--class-name", required=True, help="Class name to find children for")
     add_format_args(p_sub)
     p_sub.set_defaults(func=cmd_sub_classes)

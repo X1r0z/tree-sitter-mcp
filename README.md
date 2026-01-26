@@ -10,7 +10,6 @@ A code analysis toolkit using [tree-sitter](https://tree-sitter.github.io/tree-s
 - **Import Analysis** - Extract import statements and dependencies
 - **Variable Tracking** - Identify variable declarations with scope information
 - **Symbol Reference Tracking** - Find all references to a specific symbol
-- **Multi-Path Support** - Analyze single files, glob patterns, or entire directories
 - **Dual Interface** - Use as MCP server or standalone CLI tool
 
 ## Supported Languages
@@ -54,9 +53,6 @@ Use `tree-sitter-analyzer` for command-line analysis:
 ```bash
 # List all classes in a directory
 tree-sitter-analyzer classes ./src/
-
-# List all functions using glob pattern
-tree-sitter-analyzer functions "**/*.py"
 
 # Find all callers of a function
 tree-sitter-analyzer callers ./src/ --function process_data
@@ -112,13 +108,6 @@ See [CLI.md](CLI.md) for complete CLI documentation.
 | Tool | Description |
 |------|-------------|
 | `find_symbols` | Find all references to a specific symbol |
-
-## Path Types
-
-All tools accept a `path` parameter that supports:
-
-- **Glob pattern**: `**/*.py`, `src/**/*.js`
-- **Directory**: `/path/to/project` (searches all supported files recursively)
 
 ## Development
 

@@ -14,10 +14,6 @@ mcp = FastMCP(
     Tree-sitter MCP Server for code analysis.
     Provides function/class extraction, call graph analysis, inheritance analysis, and code structure analysis.
     Supported languages: Python, JavaScript, Java, Go
-
-    Path parameter supports:
-    - Glob pattern: **/*.py, src/**/*.js
-    - Directory: /path/to/project (searches all supported files recursively)
     """,
 )
 
@@ -27,7 +23,7 @@ def get_functions(path: str, query: str = "") -> dict:
     """Extract all function/method definitions.
 
     Args:
-        path: Glob pattern (e.g., **/*.py) or directory path
+        path: Directory path (searched recursively)
         query: Optional filter string for fuzzy matching function/method names (contains match)
     """
     try:
@@ -52,7 +48,7 @@ def get_classes(path: str, query: str = "") -> dict:
     """Extract all class/struct/interface definitions.
 
     Args:
-        path: Glob pattern (e.g., **/*.py) or directory path
+        path: Directory path (searched recursively)
         query: Optional filter string for fuzzy matching class names (contains match)
     """
     try:
@@ -77,7 +73,7 @@ def get_fields(path: str, class_name: str) -> dict:
     """Get all fields of a specific class.
 
     Args:
-        path: Glob pattern (e.g., **/*.py) or directory path
+        path: Directory path (searched recursively)
         class_name: Name of the class to get fields for
     """
     try:
@@ -100,7 +96,7 @@ def get_imports(path: str, query: str = "") -> dict:
     """Extract all import statements.
 
     Args:
-        path: Glob pattern (e.g., **/*.py) or directory path
+        path: Directory path (searched recursively)
         query: Optional filter string for fuzzy matching module names (contains match)
     """
     try:
@@ -125,7 +121,7 @@ def get_variables(path: str, query: str = "") -> dict:
     """Extract all variable declarations.
 
     Args:
-        path: Glob pattern (e.g., **/*.py) or directory path
+        path: Directory path (searched recursively)
         query: Optional filter string for fuzzy matching variable names (contains match)
     """
     try:
@@ -150,7 +146,7 @@ def get_callers(path: str, function_name: str, class_name: str | None = None) ->
     """Find all functions that call a specific function.
 
     Args:
-        path: Glob pattern (e.g., **/*.py) or directory path
+        path: Directory path (searched recursively)
         function_name: Name of the function to find callers for
         class_name: Optional class name to filter methods (if None, returns all matches)
     """
@@ -174,7 +170,7 @@ def get_callees(path: str, function_name: str, class_name: str | None = None) ->
     """Find all functions called by a specific function.
 
     Args:
-        path: Glob pattern (e.g., **/*.py) or directory path
+        path: Directory path (searched recursively)
         function_name: Name of the function to find callees for
         class_name: Optional class name to filter methods (if None, returns all matches)
     """
@@ -198,7 +194,7 @@ def find_symbols(path: str, name: str) -> dict:
     """Find all references to a specific identifier.
 
     Args:
-        path: Glob pattern (e.g., **/*.py) or directory path
+        path: Directory path (searched recursively)
         name: Identifier name to search for
     """
     try:
@@ -221,7 +217,7 @@ def get_function_definition(path: str, function_name: str, class_name: str | Non
     """Get the complete definition (source code) of a specific function.
 
     Args:
-        path: Glob pattern (e.g., **/*.py) or directory path
+        path: Directory path (searched recursively)
         function_name: Name of the function to retrieve
         class_name: Optional class name to filter methods (if None, returns all matches)
     """
@@ -247,7 +243,7 @@ def get_function_variables(path: str, function_name: str, class_name: str | None
     """Get all variables declared within a specific function.
 
     Args:
-        path: Glob pattern (e.g., **/*.py) or directory path
+        path: Directory path (searched recursively)
         function_name: Name of the function to analyze
         class_name: Optional class name to filter methods (if None, returns all matches)
     """
@@ -275,7 +271,7 @@ def get_function_strings(path: str, function_name: str, class_name: str | None =
     """Get all string literals within a specific function.
 
     Args:
-        path: Glob pattern (e.g., **/*.py) or directory path
+        path: Directory path (searched recursively)
         function_name: Name of the function to analyze
         class_name: Optional class name to filter methods (if None, returns all matches)
     """
@@ -302,7 +298,7 @@ def get_super_classes(path: str, class_name: str) -> dict:
     """Get all parent classes (superclasses) of a specific class.
 
     Args:
-        path: Glob pattern (e.g., **/*.py) or directory path
+        path: Directory path (searched recursively)
         class_name: Name of the class to find parent classes for
     """
     try:
@@ -325,7 +321,7 @@ def get_sub_classes(path: str, class_name: str) -> dict:
     """Get all child classes (subclasses) that inherit from a specific class.
 
     Args:
-        path: Glob pattern (e.g., **/*.py) or directory path
+        path: Directory path (searched recursively)
         class_name: Name of the class to find child classes for
     """
     try:

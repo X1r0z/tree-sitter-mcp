@@ -1,8 +1,7 @@
-"""Project-level code analysis with directory and glob support."""
+"""Project-level code analysis with directory support."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 
 from .analyzer import (
@@ -17,69 +16,48 @@ from .analyzer import (
 from .languages import FILE_EXTENSION_MAP
 
 
-@dataclass
-class PathType:
-    GLOB = "glob"
-    DIRECTORY = "directory"
-
-
-def detect_path_type(path: str) -> str:
-    """Detect if path is a glob pattern or directory."""
-    if any(c in path for c in ["*", "?", "[", "]"]):
-        return PathType.GLOB
-    return PathType.DIRECTORY
-
-
 def get_supported_extensions() -> set[str]:
     """Get all supported file extensions."""
     return set(FILE_EXTENSION_MAP.keys())
 
 
+def _validate_directory_path(path: str) -> Path:
+    p = Path(path)
+    if not p.exists():
+        raise FileNotFoundError(f"Path not found: {path}")
+    if not p.is_dir():
+        raise NotADirectoryError(f"Path must be a directory: {path}")
+
+    return p
+
+
 def find_files(path: str) -> list[str]:
-    """Find all supported source files based on path type.
+    """Find all supported source files under a directory.
 
     Args:
-        path: Glob pattern or directory path
+        path: Directory path (searched recursively)
 
     Returns:
         List of absolute file paths
     """
-    path_type = detect_path_type(path)
+    directory = _validate_directory_path(path)
     extensions = get_supported_extensions()
-
-    if path_type == PathType.GLOB:
-        if path.startswith("/"):
-            results = list(Path("/").glob(path.lstrip("/")))
-        else:
-            results = list(Path(".").glob(path))
-
-        files = []
-        for p in results:
-            if p.is_file() and p.suffix in extensions:
-                files.append(str(p.resolve()))
-        return sorted(files)
-
-    if path_type == PathType.DIRECTORY:
-        directory = Path(path)
-        files = []
-        for ext in extensions:
-            files.extend(str(p.resolve()) for p in directory.rglob(f"*{ext}") if p.is_file())
-        return sorted(set(files))
-
-    return []
+    files = []
+    for ext in extensions:
+        files.extend(str(p.resolve()) for p in directory.rglob(f"*{ext}") if p.is_file())
+    return sorted(set(files))
 
 
 class ProjectAnalyzer:
     """Analyzes multiple source files in a project."""
 
     def __init__(self, path: str):
-        """Initialize with a glob pattern or directory.
+        """Initialize with a directory.
 
         Args:
-            path: Glob pattern (e.g., "**/*.py") or directory path
+            path: Directory path (searched recursively)
         """
         self.path = path
-        self.path_type = detect_path_type(path)
         self.files = find_files(path)
         self._analyzers: dict[str, CodeAnalyzer] = {}
 
