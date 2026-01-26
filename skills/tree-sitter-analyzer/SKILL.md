@@ -12,7 +12,13 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go.
 
 ## When to Use This Skill
 
-Use this skill whenever you need fast, structural answers from a codebase without relying on regex-only searches, for example:
+Use this skill whenever you need fast, structural answers from a codebase without relying on regex-only searches.
+
+Prefer this skill over Grep for code understanding tasks, because it uses the parsed AST (not plain text) and can answer questions like “who calls this?”, “what does this function call?”, and “what fields does this class define?” reliably across formatting differences.
+
+Only fall back to Grep when you truly need an exact text match (e.g., a specific string literal), or when the target language/file type is not supported by this skill.
+
+Examples of structural questions this skill answers well:
 
 - Enumerate functions/methods/classes and their locations across a repository
 - Inspect class fields and high-level class structure (methods/fields lists)
@@ -371,7 +377,27 @@ tree-sitter-analyzer symbols ./src/ -n CONFIG_PATH
 
 ## Typical Workflows
 
-### 1. Inventory a repository (functions/classes/imports)
+### Replace common Grep use-cases with AST queries
+
+```bash
+# "Where is this function defined?"
+tree-sitter-analyzer definition /path/to/project -f <FUNCTION> --json
+
+# "Who calls this function?"
+tree-sitter-analyzer callers /path/to/project -f <FUNCTION> --json
+
+# "What does this function call?"
+tree-sitter-analyzer callees /path/to/project -f <FUNCTION> --json
+
+# "Where is this identifier used?"
+tree-sitter-analyzer symbols /path/to/project -n <NAME> --json
+
+# "Show me all classes / all functions" (optionally filter by fuzzy query)
+tree-sitter-analyzer classes /path/to/project -q <QUERY>
+tree-sitter-analyzer functions /path/to/project -q <QUERY>
+```
+
+### Inventory a repository (functions/classes/imports)
 
 ```bash
 tree-sitter-analyzer functions /path/to/project --json
@@ -379,20 +405,20 @@ tree-sitter-analyzer classes /path/to/project --json
 tree-sitter-analyzer imports /path/to/project --json
 ```
 
-### 2. Find impact of a change (callers/callees)
+### Find impact of a change (callers/callees)
 
 ```bash
 tree-sitter-analyzer callers /path/to/project -f process_data --json
 tree-sitter-analyzer callees /path/to/project -f process_data --json
 ```
 
-### 3. Track a symbol through a project
+### Track a symbol through a project
 
 ```bash
 tree-sitter-analyzer symbols /path/to/project -n CONFIG_PATH --json
 ```
 
-### 4. Inspect a specific function in detail
+### Inspect a specific function in detail
 
 ```bash
 tree-sitter-analyzer definition /path/to/project -f main --json
