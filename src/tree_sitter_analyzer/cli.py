@@ -7,6 +7,8 @@ import json
 import os
 import sys
 
+import yaml
+
 from tree_sitter_mcp.analyzer import CodeAnalyzer
 from tree_sitter_mcp.project import PathType, ProjectAnalyzer, detect_path_type
 
@@ -20,6 +22,8 @@ def _output_result(result: dict, output_format: str) -> None:
     """Output result in specified format."""
     if output_format == "json":
         print(json.dumps(result, indent=2, ensure_ascii=False))
+    elif output_format == "yaml":
+        print(yaml.dump(result, allow_unicode=True, default_flow_style=False, sort_keys=False))
     else:
         _print_pretty(result)
 
@@ -633,15 +637,16 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
-    def add_json_arg(p: argparse.ArgumentParser) -> None:
+    def add_format_args(p: argparse.ArgumentParser) -> None:
         p.add_argument("--json", action="store_true", help="Output in JSON format")
+        p.add_argument("--yaml", action="store_true", help="Output in YAML format")
 
     # functions command
     p_functions = subparsers.add_parser("functions", help="Extract all function/method definitions")
     p_functions.add_argument("path", help="File path, glob pattern, or directory")
     p_functions.add_argument("-q", "--query", help="Filter by function name (fuzzy match)")
     p_functions.add_argument("--body", action="store_true", help="Include function body")
-    add_json_arg(p_functions)
+    add_format_args(p_functions)
     p_functions.set_defaults(func=cmd_functions)
 
     # classes command
@@ -650,28 +655,28 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     )
     p_classes.add_argument("path", help="File path, glob pattern, or directory")
     p_classes.add_argument("-q", "--query", help="Filter by class name (fuzzy match)")
-    add_json_arg(p_classes)
+    add_format_args(p_classes)
     p_classes.set_defaults(func=cmd_classes)
 
     # fields command
     p_fields = subparsers.add_parser("fields", help="Get all fields of a specific class")
     p_fields.add_argument("path", help="File path, glob pattern, or directory")
     p_fields.add_argument("-c", "--class-name", required=True, help="Class name to get fields for")
-    add_json_arg(p_fields)
+    add_format_args(p_fields)
     p_fields.set_defaults(func=cmd_fields)
 
     # imports command
     p_imports = subparsers.add_parser("imports", help="Extract all import statements")
     p_imports.add_argument("path", help="File path, glob pattern, or directory")
     p_imports.add_argument("-q", "--query", help="Filter by module name (fuzzy match)")
-    add_json_arg(p_imports)
+    add_format_args(p_imports)
     p_imports.set_defaults(func=cmd_imports)
 
     # variables command
     p_variables = subparsers.add_parser("variables", help="Extract all variable declarations")
     p_variables.add_argument("path", help="File path, glob pattern, or directory")
     p_variables.add_argument("-q", "--query", help="Filter by variable name (fuzzy match)")
-    add_json_arg(p_variables)
+    add_format_args(p_variables)
     p_variables.set_defaults(func=cmd_variables)
 
     # callers command
@@ -683,7 +688,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
         "-f", "--function", required=True, help="Function name to find callers for"
     )
     p_callers.add_argument("-c", "--class-name", help="Class name to filter methods")
-    add_json_arg(p_callers)
+    add_format_args(p_callers)
     p_callers.set_defaults(func=cmd_callers)
 
     # callees command
@@ -695,7 +700,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
         "-f", "--function", required=True, help="Function name to find callees for"
     )
     p_callees.add_argument("-c", "--class-name", help="Class name to filter methods")
-    add_json_arg(p_callees)
+    add_format_args(p_callees)
     p_callees.set_defaults(func=cmd_callees)
 
     # symbols command
@@ -704,7 +709,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     )
     p_symbols.add_argument("path", help="File path, glob pattern, or directory")
     p_symbols.add_argument("-n", "--name", required=True, help="Identifier name to search for")
-    add_json_arg(p_symbols)
+    add_format_args(p_symbols)
     p_symbols.set_defaults(func=cmd_symbols)
 
     # definition command
@@ -714,7 +719,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_definition.add_argument("path", help="File path, glob pattern, or directory")
     p_definition.add_argument("-f", "--function", required=True, help="Function name to retrieve")
     p_definition.add_argument("-c", "--class-name", help="Class name to filter methods")
-    add_json_arg(p_definition)
+    add_format_args(p_definition)
     p_definition.set_defaults(func=cmd_definition)
 
     # function-variables command
@@ -724,7 +729,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_func_vars.add_argument("path", help="File path, glob pattern, or directory")
     p_func_vars.add_argument("-f", "--function", required=True, help="Function name to analyze")
     p_func_vars.add_argument("-c", "--class-name", help="Class name to filter methods")
-    add_json_arg(p_func_vars)
+    add_format_args(p_func_vars)
     p_func_vars.set_defaults(func=cmd_function_variables)
 
     # function-strings command
@@ -734,7 +739,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     p_func_strings.add_argument("path", help="File path, glob pattern, or directory")
     p_func_strings.add_argument("-f", "--function", required=True, help="Function name to analyze")
     p_func_strings.add_argument("-c", "--class-name", help="Class name to filter methods")
-    add_json_arg(p_func_strings)
+    add_format_args(p_func_strings)
     p_func_strings.set_defaults(func=cmd_function_strings)
 
     # super-classes command
@@ -743,7 +748,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     )
     p_super.add_argument("path", help="File path, glob pattern, or directory")
     p_super.add_argument("-c", "--class-name", required=True, help="Class name to find parents for")
-    add_json_arg(p_super)
+    add_format_args(p_super)
     p_super.set_defaults(func=cmd_super_classes)
 
     # sub-classes command
@@ -752,7 +757,7 @@ Supported languages: Python, JavaScript/TypeScript, Java, Go
     )
     p_sub.add_argument("path", help="File path, glob pattern, or directory")
     p_sub.add_argument("-c", "--class-name", required=True, help="Class name to find children for")
-    add_json_arg(p_sub)
+    add_format_args(p_sub)
     p_sub.set_defaults(func=cmd_sub_classes)
 
     return parser
@@ -768,7 +773,12 @@ def main() -> int:
         return 1
 
     result = args.func(args)
-    output_format = "json" if args.json else "pretty"
+    if args.json:
+        output_format = "json"
+    elif args.yaml:
+        output_format = "yaml"
+    else:
+        output_format = "pretty"
     _output_result(result, output_format)
 
     return 0 if "error" not in result else 1

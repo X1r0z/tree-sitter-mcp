@@ -40,7 +40,12 @@ All commands accept a `path` argument that supports:
 
 ### Output Formats
 
-By default, output is in human-readable format. Use `--json` flag for JSON output.
+By default, output is in human-readable format. Use `--json` or `--yaml` flag for structured output.
+
+| Option | Description |
+|--------|-------------|
+| `--json` | Output in JSON format |
+| `--yaml` | Output in YAML format |
 
 ```bash
 # Human-readable output
@@ -48,6 +53,9 @@ tree-sitter-analyzer functions ./src/
 
 # JSON output
 tree-sitter-analyzer functions ./src/ --json
+
+# YAML output
+tree-sitter-analyzer functions ./src/ --yaml
 ```
 
 ## Commands
@@ -59,14 +67,13 @@ tree-sitter-analyzer functions ./src/ --json
 Extract all function/method definitions from source code.
 
 ```bash
-tree-sitter-analyzer functions <path> [-q QUERY] [--body] [--json]
+tree-sitter-analyzer functions <path> [-q QUERY] [--body] [--json] [--yaml]
 ```
 
 | Option | Description |
 |--------|-------------|
 | `-q, --query` | Filter by function name (fuzzy match) |
 | `--body` | Include function body in output |
-| `--json` | Output in JSON format |
 
 **Examples:**
 
@@ -82,6 +89,9 @@ tree-sitter-analyzer functions ./src/main.py --body
 
 # Output as JSON
 tree-sitter-analyzer functions ./src/ --json
+
+# Output as YAML
+tree-sitter-analyzer functions ./src/ --yaml
 ```
 
 #### `classes` - Extract Class Definitions
@@ -89,13 +99,12 @@ tree-sitter-analyzer functions ./src/ --json
 Extract all class/struct/interface definitions.
 
 ```bash
-tree-sitter-analyzer classes <path> [-q QUERY] [--json]
+tree-sitter-analyzer classes <path> [-q QUERY] [--json] [--yaml]
 ```
 
 | Option | Description |
 |--------|-------------|
 | `-q, --query` | Filter by class name (fuzzy match) |
-| `--json` | Output in JSON format |
 
 **Examples:**
 
@@ -112,13 +121,12 @@ tree-sitter-analyzer classes ./src/ -q Handler
 Get all fields of a specific class.
 
 ```bash
-tree-sitter-analyzer fields <path> -c CLASS_NAME [--json]
+tree-sitter-analyzer fields <path> -c CLASS_NAME [--json] [--yaml]
 ```
 
 | Option | Description |
 |--------|-------------|
 | `-c, --class-name` | Class name to get fields for (required) |
-| `--json` | Output in JSON format |
 
 **Examples:**
 
@@ -135,13 +143,12 @@ tree-sitter-analyzer fields ./src/ -c DatabaseConfig
 Extract all import statements from source code.
 
 ```bash
-tree-sitter-analyzer imports <path> [-q QUERY] [--json]
+tree-sitter-analyzer imports <path> [-q QUERY] [--json] [--yaml]
 ```
 
 | Option | Description |
 |--------|-------------|
 | `-q, --query` | Filter by module name (fuzzy match) |
-| `--json` | Output in JSON format |
 
 **Examples:**
 
@@ -158,13 +165,12 @@ tree-sitter-analyzer imports ./src/ -q json
 Extract all variable declarations with scope information.
 
 ```bash
-tree-sitter-analyzer variables <path> [-q QUERY] [--json]
+tree-sitter-analyzer variables <path> [-q QUERY] [--json] [--yaml]
 ```
 
 | Option | Description |
 |--------|-------------|
 | `-q, --query` | Filter by variable name (fuzzy match) |
-| `--json` | Output in JSON format |
 
 **Examples:**
 
@@ -183,13 +189,12 @@ tree-sitter-analyzer variables ./src/ -q config
 Get all parent classes (superclasses) of a specific class.
 
 ```bash
-tree-sitter-analyzer super-classes <path> -c CLASS_NAME [--json]
+tree-sitter-analyzer super-classes <path> -c CLASS_NAME [--json] [--yaml]
 ```
 
 | Option | Description |
 |--------|-------------|
 | `-c, --class-name` | Class name to find parents for (required) |
-| `--json` | Output in JSON format |
 
 **Examples:**
 
@@ -203,13 +208,12 @@ tree-sitter-analyzer super-classes ./src/models.py -c AdminUser
 Get all child classes (subclasses) that inherit from a specific class.
 
 ```bash
-tree-sitter-analyzer sub-classes <path> -c CLASS_NAME [--json]
+tree-sitter-analyzer sub-classes <path> -c CLASS_NAME [--json] [--yaml]
 ```
 
 | Option | Description |
 |--------|-------------|
 | `-c, --class-name` | Class name to find children for (required) |
-| `--json` | Output in JSON format |
 
 **Examples:**
 
@@ -225,14 +229,13 @@ tree-sitter-analyzer sub-classes ./src/ -c BaseModel
 Find all functions that call a specific function.
 
 ```bash
-tree-sitter-analyzer callers <path> -f FUNCTION [-c CLASS_NAME] [--json]
+tree-sitter-analyzer callers <path> -f FUNCTION [-c CLASS_NAME] [--json] [--yaml]
 ```
 
 | Option | Description |
 |--------|-------------|
 | `-f, --function` | Function name to find callers for (required) |
 | `-c, --class-name` | Class name to filter methods |
-| `--json` | Output in JSON format |
 
 **Examples:**
 
@@ -249,14 +252,13 @@ tree-sitter-analyzer callers ./src/ -f save -c DatabaseHandler
 Find all functions called by a specific function.
 
 ```bash
-tree-sitter-analyzer callees <path> -f FUNCTION [-c CLASS_NAME] [--json]
+tree-sitter-analyzer callees <path> -f FUNCTION [-c CLASS_NAME] [--json] [--yaml]
 ```
 
 | Option | Description |
 |--------|-------------|
 | `-f, --function` | Function name to find callees for (required) |
 | `-c, --class-name` | Class name to filter methods |
-| `--json` | Output in JSON format |
 
 **Examples:**
 
@@ -275,14 +277,13 @@ tree-sitter-analyzer callees ./src/ -f initialize -c Application
 Get the complete source code of a specific function.
 
 ```bash
-tree-sitter-analyzer definition <path> -f FUNCTION [-c CLASS_NAME] [--json]
+tree-sitter-analyzer definition <path> -f FUNCTION [-c CLASS_NAME] [--json] [--yaml]
 ```
 
 | Option | Description |
 |--------|-------------|
 | `-f, --function` | Function name to retrieve (required) |
 | `-c, --class-name` | Class name to filter methods |
-| `--json` | Output in JSON format |
 
 **Examples:**
 
@@ -299,14 +300,13 @@ tree-sitter-analyzer definition ./src/ -f connect -c Database
 Get all variables declared within a specific function.
 
 ```bash
-tree-sitter-analyzer function-variables <path> -f FUNCTION [-c CLASS_NAME] [--json]
+tree-sitter-analyzer function-variables <path> -f FUNCTION [-c CLASS_NAME] [--json] [--yaml]
 ```
 
 | Option | Description |
 |--------|-------------|
 | `-f, --function` | Function name to analyze (required) |
 | `-c, --class-name` | Class name to filter methods |
-| `--json` | Output in JSON format |
 
 **Examples:**
 
@@ -320,14 +320,13 @@ tree-sitter-analyzer function-variables ./src/main.py -f process_request
 Get all string literals within a specific function.
 
 ```bash
-tree-sitter-analyzer function-strings <path> -f FUNCTION [-c CLASS_NAME] [--json]
+tree-sitter-analyzer function-strings <path> -f FUNCTION [-c CLASS_NAME] [--json] [--yaml]
 ```
 
 | Option | Description |
 |--------|-------------|
 | `-f, --function` | Function name to analyze (required) |
 | `-c, --class-name` | Class name to filter methods |
-| `--json` | Output in JSON format |
 
 **Examples:**
 
@@ -343,13 +342,12 @@ tree-sitter-analyzer function-strings ./src/api.py -f handle_request
 Find all references to a specific identifier.
 
 ```bash
-tree-sitter-analyzer symbols <path> -n NAME [--json]
+tree-sitter-analyzer symbols <path> -n NAME [--json] [--yaml]
 ```
 
 | Option | Description |
 |--------|-------------|
 | `-n, --name` | Identifier name to search for (required) |
-| `--json` | Output in JSON format |
 
 **Examples:**
 
@@ -367,25 +365,3 @@ tree-sitter-analyzer symbols ./src/main.py -n logger
 |------|-------------|
 | 0 | Success |
 | 1 | Error (check stderr for details) |
-
-## JSON Output Format
-
-All commands return JSON with a consistent structure:
-
-```json
-{
-  "path": "/absolute/path/to/target",
-  "path_type": "file|directory|glob",
-  "count": 10,
-  "files_searched": 5,
-  ...
-}
-```
-
-On error:
-
-```json
-{
-  "error": "Error message"
-}
-```

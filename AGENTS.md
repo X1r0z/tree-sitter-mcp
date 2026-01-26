@@ -6,7 +6,6 @@
 - Run CLI tool: `uv run tree-sitter-analyzer <command> <path> [options]`
 - Lint: `uv run ruff check src/`
 - Format: `uv run ruff format src/`
-- No tests exist yet
 
 ## Architecture
 - **tree_sitter_mcp/** - FastMCP server exposing AST analysis as MCP tools

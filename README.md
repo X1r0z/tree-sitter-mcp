@@ -66,6 +66,9 @@ tree-sitter-analyzer definition ./src/main.py --function main
 
 # Output as JSON
 tree-sitter-analyzer functions ./src/ --json
+
+# Output as YAML
+tree-sitter-analyzer functions ./src/ --yaml
 ```
 
 See [CLI.md](CLI.md) for complete CLI documentation.
