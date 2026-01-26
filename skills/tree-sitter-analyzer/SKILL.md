@@ -1,13 +1,12 @@
 ---
 name: "tree-sitter-analyzer"
 description: "AST code analysis via tree-sitter (structure, calls, inheritance, symbols). Invoke when you need structural code insights from files or directories."
+allowed-tools: Bash(tree-sitter-analyzer:*)
 ---
 
 # Tree-sitter Analyzer
 
-Tree-sitter Analyzer is a code analysis toolkit built on tree-sitter AST parsing. It can be used as:
-
-- A command-line tool: `tree-sitter-analyzer`
+Tree-sitter Analyzer is a code analysis toolkit built on tree-sitter AST parsing.
 
 Supported languages: Python, JavaScript/TypeScript, Java, Go.
 
@@ -92,6 +91,8 @@ tree-sitter-analyzer functions <path> [-q QUERY] [--body] [--json]
 | `-q, --query` | Filter by function name (fuzzy match) |
 | `--body` | Include function body in output |
 
+Examples:
+
 ```bash
 # List all functions in a directory
 tree-sitter-analyzer functions ./src/
@@ -118,6 +119,8 @@ tree-sitter-analyzer classes <path> [-q QUERY] [--json]
 |--------|-------------|
 | `-q, --query` | Filter by class name (fuzzy match) |
 
+Examples:
+
 ```bash
 # List all classes in a directory
 tree-sitter-analyzer classes ./src/
@@ -137,6 +140,8 @@ tree-sitter-analyzer fields <path> -c CLASS_NAME [--json]
 | Option | Description |
 |--------|-------------|
 | `-c, --class-name` | Class name to get fields for (required) |
+
+Examples:
 
 ```bash
 # Get fields of a class
@@ -158,6 +163,8 @@ tree-sitter-analyzer imports <path> [-q QUERY] [--json]
 |--------|-------------|
 | `-q, --query` | Filter by module name (fuzzy match) |
 
+Examples:
+
 ```bash
 # List all imports in a directory
 tree-sitter-analyzer imports ./src/
@@ -177,6 +184,8 @@ tree-sitter-analyzer variables <path> [-q QUERY] [--json]
 | Option | Description |
 |--------|-------------|
 | `-q, --query` | Filter by variable name (fuzzy match) |
+
+Examples:
 
 ```bash
 # List all variables in a directory
@@ -200,6 +209,8 @@ tree-sitter-analyzer super-classes <path> -c CLASS_NAME [--json]
 |--------|-------------|
 | `-c, --class-name` | Class name to find parents for (required) |
 
+Examples:
+
 ```bash
 # Find parent classes
 tree-sitter-analyzer super-classes ./src/ -c AdminUser
@@ -216,6 +227,8 @@ tree-sitter-analyzer sub-classes <path> -c CLASS_NAME [--json]
 | Option | Description |
 |--------|-------------|
 | `-c, --class-name` | Class name to find children for (required) |
+
+Examples:
 
 ```bash
 # Find child classes across a project
@@ -237,6 +250,8 @@ tree-sitter-analyzer callers <path> -f FUNCTION [-c CLASS_NAME] [--json]
 | `-f, --function` | Function name to find callers for (required) |
 | `-c, --class-name` | Class name to filter methods |
 
+Examples:
+
 ```bash
 # Find all callers of a function
 tree-sitter-analyzer callers ./src/ -f process_data
@@ -257,6 +272,8 @@ tree-sitter-analyzer callees <path> -f FUNCTION [-c CLASS_NAME] [--json]
 |--------|-------------|
 | `-f, --function` | Function name to find callees for (required) |
 | `-c, --class-name` | Class name to filter methods |
+
+Examples:
 
 ```bash
 # Find all functions called by main
@@ -281,6 +298,8 @@ tree-sitter-analyzer definition <path> -f FUNCTION [-c CLASS_NAME] [--json]
 | `-f, --function` | Function name to retrieve (required) |
 | `-c, --class-name` | Class name to filter methods |
 
+Examples:
+
 ```bash
 # Get function definition
 tree-sitter-analyzer definition ./src/ -f parse_config
@@ -302,6 +321,8 @@ tree-sitter-analyzer function-variables <path> -f FUNCTION [-c CLASS_NAME] [--js
 | `-f, --function` | Function name to analyze (required) |
 | `-c, --class-name` | Class name to filter methods |
 
+Examples:
+
 ```bash
 # Get variables in a function
 tree-sitter-analyzer function-variables ./src/ -f process_request
@@ -319,6 +340,8 @@ tree-sitter-analyzer function-strings <path> -f FUNCTION [-c CLASS_NAME] [--json
 |--------|-------------|
 | `-f, --function` | Function name to analyze (required) |
 | `-c, --class-name` | Class name to filter methods |
+
+Examples:
 
 ```bash
 # Get string literals in a function
@@ -338,6 +361,8 @@ tree-sitter-analyzer symbols <path> -n NAME [--json]
 | Option | Description |
 |--------|-------------|
 | `-n, --name` | Identifier name to search for (required) |
+
+Examples:
 
 ```bash
 # Find all references to a symbol

@@ -67,6 +67,8 @@ tree-sitter-analyzer functions <path> [-q QUERY] [--body] [--json] [--yaml]
 | `-q, --query` | Filter by function name (fuzzy match) |
 | `--body` | Include function body in output |
 
+Examples:
+
 ```bash
 # List all functions in a directory
 tree-sitter-analyzer functions ./src/
@@ -96,6 +98,8 @@ tree-sitter-analyzer classes <path> [-q QUERY] [--json] [--yaml]
 |--------|-------------|
 | `-q, --query` | Filter by class name (fuzzy match) |
 
+Examples:
+
 ```bash
 # List all classes in a directory
 tree-sitter-analyzer classes ./src/
@@ -115,6 +119,8 @@ tree-sitter-analyzer fields <path> -c CLASS_NAME [--json] [--yaml]
 | Option | Description |
 |--------|-------------|
 | `-c, --class-name` | Class name to get fields for (required) |
+
+Examples:
 
 ```bash
 # Get fields of a class
@@ -136,6 +142,8 @@ tree-sitter-analyzer imports <path> [-q QUERY] [--json] [--yaml]
 |--------|-------------|
 | `-q, --query` | Filter by module name (fuzzy match) |
 
+Examples:
+
 ```bash
 # List all imports in a directory
 tree-sitter-analyzer imports ./src/
@@ -155,6 +163,8 @@ tree-sitter-analyzer variables <path> [-q QUERY] [--json] [--yaml]
 | Option | Description |
 |--------|-------------|
 | `-q, --query` | Filter by variable name (fuzzy match) |
+
+Examples:
 
 ```bash
 # List all variables in a directory
@@ -178,6 +188,8 @@ tree-sitter-analyzer super-classes <path> -c CLASS_NAME [--json] [--yaml]
 |--------|-------------|
 | `-c, --class-name` | Class name to find parents for (required) |
 
+Examples:
+
 ```bash
 # Find parent classes
 tree-sitter-analyzer super-classes ./src/ -c AdminUser
@@ -194,6 +206,8 @@ tree-sitter-analyzer sub-classes <path> -c CLASS_NAME [--json] [--yaml]
 | Option | Description |
 |--------|-------------|
 | `-c, --class-name` | Class name to find children for (required) |
+
+Examples:
 
 ```bash
 # Find child classes across a project
@@ -215,6 +229,8 @@ tree-sitter-analyzer callers <path> -f FUNCTION [-c CLASS_NAME] [--json] [--yaml
 | `-f, --function` | Function name to find callers for (required) |
 | `-c, --class-name` | Class name to filter methods |
 
+Examples:
+
 ```bash
 # Find all callers of a function
 tree-sitter-analyzer callers ./src/ -f process_data
@@ -235,6 +251,8 @@ tree-sitter-analyzer callees <path> -f FUNCTION [-c CLASS_NAME] [--json] [--yaml
 |--------|-------------|
 | `-f, --function` | Function name to find callees for (required) |
 | `-c, --class-name` | Class name to filter methods |
+
+Examples:
 
 ```bash
 # Find all functions called by main
@@ -259,6 +277,8 @@ tree-sitter-analyzer definition <path> -f FUNCTION [-c CLASS_NAME] [--json] [--y
 | `-f, --function` | Function name to retrieve (required) |
 | `-c, --class-name` | Class name to filter methods |
 
+Examples:
+
 ```bash
 # Get function definition
 tree-sitter-analyzer definition ./src/ -f parse_config
@@ -280,6 +300,8 @@ tree-sitter-analyzer function-variables <path> -f FUNCTION [-c CLASS_NAME] [--js
 | `-f, --function` | Function name to analyze (required) |
 | `-c, --class-name` | Class name to filter methods |
 
+Examples:
+
 ```bash
 # Get variables in a function
 tree-sitter-analyzer function-variables ./src/ -f process_request
@@ -297,6 +319,8 @@ tree-sitter-analyzer function-strings <path> -f FUNCTION [-c CLASS_NAME] [--json
 |--------|-------------|
 | `-f, --function` | Function name to analyze (required) |
 | `-c, --class-name` | Class name to filter methods |
+
+Examples:
 
 ```bash
 # Get string literals in a function
@@ -316,6 +340,8 @@ tree-sitter-analyzer symbols <path> -n NAME [--json] [--yaml]
 | Option | Description |
 |--------|-------------|
 | `-n, --name` | Identifier name to search for (required) |
+
+Examples:
 
 ```bash
 # Find all references to a symbol
