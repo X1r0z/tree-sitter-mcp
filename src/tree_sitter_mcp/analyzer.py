@@ -244,13 +244,15 @@ class CodeAnalyzer:
             "arrow_function",
             "method_declaration",
             "constructor_declaration",
+            "function_expression",
         }
         while current:
             if current.type in func_types:
+                name_node = current.child_by_field_name("name")
+                if name_node:
+                    return self._node_text(name_node)
                 for child in current.children:
                     if child.type in ("identifier", "property_identifier", "field_identifier"):
-                        return self._node_text(child)
-                    if hasattr(child, "field_name") and child.type == "name":
                         return self._node_text(child)
             current = current.parent
         return None
@@ -1046,13 +1048,24 @@ class CodeAnalyzer:
             obj_name = None
 
             if self._language == "java":
-                name_node = call_node.child_by_field_name("name")
-                object_node = call_node.child_by_field_name("object")
-                if name_node:
-                    callee = self._node_text(name_node)
-                if object_node:
-                    is_method = True
-                    obj_name = self._node_text(object_node)
+                if call_node.type == "object_creation_expression":
+                    type_node = call_node.child_by_field_name("type")
+                    if type_node:
+                        if type_node.type == "generic_type":
+                            for child in type_node.children:
+                                if child.type == "type_identifier":
+                                    callee = self._node_text(child)
+                                    break
+                        else:
+                            callee = self._node_text(type_node)
+                else:
+                    name_node = call_node.child_by_field_name("name")
+                    object_node = call_node.child_by_field_name("object")
+                    if name_node:
+                        callee = self._node_text(name_node)
+                    if object_node:
+                        is_method = True
+                        obj_name = self._node_text(object_node)
             else:
                 func_node = call_node.child_by_field_name("function")
                 if func_node:
