@@ -186,6 +186,9 @@ class CodeAnalyzer:
         self._source: bytes | None = None
         self._tree: tree_sitter.Tree | None = None
         self._parser: tree_sitter.Parser | None = None
+        self._functions_cache: list[FunctionInfo] | None = None
+        self._calls_cache: list[CallInfo] | None = None
+        self._classes_cache: list[ClassInfo] | None = None
 
         if file_path:
             self._load_file(file_path)
@@ -245,34 +248,52 @@ class CodeAnalyzer:
             "method_declaration",
             "constructor_declaration",
             "function_expression",
+            "func_literal",
         }
+        anonymous_types = {"arrow_function", "func_literal"}
         while current:
             if current.type in func_types:
                 name_node = current.child_by_field_name("name")
                 if name_node:
                     return self._node_text(name_node)
+                if current.type in anonymous_types:
+                    inferred = self._infer_anonymous_function_name(current)
+                    return inferred
+                if current.type == "function_expression":
+                    inferred = self._infer_anonymous_function_name(current)
+                    return inferred
                 for child in current.children:
                     if child.type in ("identifier", "property_identifier", "field_identifier"):
                         return self._node_text(child)
             current = current.parent
         return None
 
+    def _infer_anonymous_function_name(self, func_node: tree_sitter.Node) -> str | None:
+        """Infer the name of an anonymous function from its assignment context."""
+        parent = func_node.parent
+        if not parent:
+            return None
+        if parent.type == "variable_declarator":
+            name_node = parent.child_by_field_name("name")
+            if name_node and name_node.type == "identifier":
+                return self._node_text(name_node)
+        elif parent.type == "assignment_expression":
+            left_node = parent.child_by_field_name("left")
+            if left_node and left_node.type == "identifier":
+                return self._node_text(left_node)
+        elif parent.type in ("pair", "property"):
+            key_node = parent.child_by_field_name("key")
+            if key_node and key_node.type in ("identifier", "property_identifier", "string"):
+                text = self._node_text(key_node)
+                return text.strip("\"'")
+        elif parent.type == "assignment":
+            left_node = parent.child_by_field_name("left")
+            if left_node and left_node.type == "identifier":
+                return self._node_text(left_node)
+        return None
+
     def _find_enclosing_class(self, node: tree_sitter.Node) -> str | None:
         """Find the name of the class that encloses this node."""
-        if node.type == "method_declaration":
-            for child in node.children:
-                if child.type == "parameter_list":
-                    for param in child.children:
-                        if param.type == "parameter_declaration":
-                            for p in param.children:
-                                if p.type == "pointer_type":
-                                    for pt in p.children:
-                                        if pt.type == "type_identifier":
-                                            return self._node_text(pt)
-                                if p.type == "type_identifier":
-                                    return self._node_text(p)
-                    break
-
         class_types = {
             "class_definition",
             "class_declaration",
@@ -281,11 +302,31 @@ class CodeAnalyzer:
         }
         current = node.parent
         while current:
+            if current.type == "method_declaration":
+                receiver_class = self._extract_go_receiver_type(current)
+                if receiver_class:
+                    return receiver_class
             if current.type in class_types:
                 for child in current.children:
                     if child.type in ("identifier", "type_identifier", "name"):
                         return self._node_text(child)
             current = current.parent
+        return None
+
+    def _extract_go_receiver_type(self, method_node: tree_sitter.Node) -> str | None:
+        """Extract receiver type from a Go method_declaration node."""
+        for child in method_node.children:
+            if child.type == "parameter_list":
+                for param in child.children:
+                    if param.type == "parameter_declaration":
+                        for p in param.children:
+                            if p.type == "pointer_type":
+                                for pt in p.children:
+                                    if pt.type == "type_identifier":
+                                        return self._node_text(pt)
+                            if p.type == "type_identifier":
+                                return self._node_text(p)
+                break
         return None
 
     def _parse_attribute_node(self, node: tree_sitter.Node) -> tuple[str, str | None]:
@@ -294,29 +335,53 @@ class CodeAnalyzer:
         Returns (callee, object_name) tuple.
         For 'os.path.join', returns ('join', 'os.path').
         For 'self.method', returns ('method', 'self').
+        For 'this.method', returns ('method', 'this').
         For 'os.makedirs', returns ('makedirs', 'os').
         """
-        id_types = ("identifier", "property_identifier", "field_identifier")
-        attr_types = ("attribute", "member_expression", "selector_expression")
-
         callee = ""
         obj_name = None
-        ids = []
 
-        for child in node.children:
-            if child.type in id_types:
-                ids.append(self._node_text(child))
-            elif child.type in attr_types:
-                obj_name = self._node_text(child)
-
-        if ids:
-            callee = ids[-1]
-            if len(ids) > 1 and obj_name is None:
-                obj_name = ids[0]
+        if node.type == "attribute":
+            obj_node = node.child_by_field_name("object")
+            attr_node = node.child_by_field_name("attribute")
+            if attr_node:
+                callee = self._node_text(attr_node)
+            if obj_node:
+                obj_name = self._node_text(obj_node)
+        elif node.type == "member_expression":
+            obj_node = node.child_by_field_name("object")
+            prop_node = node.child_by_field_name("property")
+            if prop_node:
+                callee = self._node_text(prop_node)
+            if obj_node:
+                obj_name = self._node_text(obj_node)
+        elif node.type == "selector_expression":
+            operand_node = node.child_by_field_name("operand")
+            field_node = node.child_by_field_name("field")
+            if field_node:
+                callee = self._node_text(field_node)
+            if operand_node:
+                obj_name = self._node_text(operand_node)
+        else:
+            id_types = ("identifier", "property_identifier", "field_identifier")
+            attr_types = ("attribute", "member_expression", "selector_expression")
+            ids = []
+            for child in node.children:
+                if child.type in id_types:
+                    ids.append(self._node_text(child))
+                elif child.type in attr_types:
+                    obj_name = self._node_text(child)
+            if ids:
+                callee = ids[-1]
+                if len(ids) > 1 and obj_name is None:
+                    obj_name = ids[0]
 
         return callee, obj_name
 
     def get_functions(self) -> list[FunctionInfo]:
+        if self._functions_cache is not None:
+            return self._functions_cache
+
         if not self._language:
             return []
 
@@ -351,6 +416,7 @@ class CodeAnalyzer:
                     )
                 )
 
+        self._functions_cache = functions
         return functions
 
     def get_function_by_name(self, name: str, class_name: str | None = None) -> FunctionInfo | None:
@@ -409,26 +475,51 @@ class CodeAnalyzer:
         return None
 
     def get_function_callees(self, function_name: str, class_name: str | None = None) -> list[dict]:
-        """Get all functions/methods called by a specific function."""
+        """Get all functions/methods called by a specific function.
+
+        Works for both named functions (from get_functions()) and inferred names
+        from anonymous functions like arrow functions.
+        """
         funcs = self.get_all_functions_by_name(function_name, class_name)
         all_calls = self.get_calls()
         callees: list[dict] = []
-        for func in funcs:
+        seen: set[tuple[str, str | None]] = set()
+
+        if funcs:
+            for func in funcs:
+                for call in all_calls:
+                    if call.caller == func.name and call.caller_class_name == func.class_name:
+                        callee = call.callee
+                        if call.object_name:
+                            callee = f"{call.object_name}.{callee}"
+                        key = (callee, func.class_name)
+                        if key not in seen:
+                            seen.add(key)
+                            callees.append(
+                                {
+                                    "callee": callee,
+                                    "line": call.location.start_line,
+                                    "class_name": func.class_name,
+                                }
+                            )
+        else:
             for call in all_calls:
-                if func.location.start_line <= call.location.start_line <= func.location.end_line:
+                if call.caller == function_name:
+                    if class_name is not None and call.caller_class_name != class_name:
+                        continue
                     callee = call.callee
                     if call.object_name:
                         callee = f"{call.object_name}.{callee}"
-                    entry = {
-                        "callee": callee,
-                        "line": call.location.start_line,
-                        "class_name": func.class_name,
-                    }
-                    if not any(
-                        e["callee"] == callee and e["class_name"] == func.class_name
-                        for e in callees
-                    ):
-                        callees.append(entry)
+                    key = (callee, call.caller_class_name)
+                    if key not in seen:
+                        seen.add(key)
+                        callees.append(
+                            {
+                                "callee": callee,
+                                "line": call.location.start_line,
+                                "class_name": call.caller_class_name,
+                            }
+                        )
         return callees
 
     def get_function_callers(self, function_name: str, class_name: str | None = None) -> list[dict]:
@@ -438,6 +529,7 @@ class CodeAnalyzer:
         """
         all_calls = self.get_calls()
         callers: list[dict] = []
+        seen: set[tuple[str, int]] = set()
         for call in all_calls:
             if call.callee != function_name:
                 continue
@@ -449,21 +541,33 @@ class CodeAnalyzer:
                 matches_this_qualifier = (
                     call.object_name == "this" and call.caller_class_name == class_name
                 )
+                matches_self_qualifier = (
+                    call.object_name == "self" and call.caller_class_name == class_name
+                )
                 if not (
-                    matches_explicit_target or matches_implicit_same_class or matches_this_qualifier
+                    matches_explicit_target
+                    or matches_implicit_same_class
+                    or matches_this_qualifier
+                    or matches_self_qualifier
                 ):
                     continue
             caller = call.caller or "<module>"
-            entry = {
-                "caller": caller,
-                "line": call.location.start_line,
-                "target_class": class_name,
-            }
-            if not any(e["caller"] == caller and e["line"] == entry["line"] for e in callers):
-                callers.append(entry)
+            key = (caller, call.location.start_line)
+            if key not in seen:
+                seen.add(key)
+                callers.append(
+                    {
+                        "caller": caller,
+                        "line": call.location.start_line,
+                        "target_class": class_name,
+                    }
+                )
         return callers
 
     def get_classes(self) -> list[ClassInfo]:
+        if self._classes_cache is not None:
+            return self._classes_cache
+
         if not self._language:
             return []
 
@@ -507,6 +611,7 @@ class CodeAnalyzer:
                     )
                 )
 
+        self._classes_cache = classes
         return classes
 
     def _extract_methods_from_class(self, class_node: tree_sitter.Node) -> list[str]:
@@ -1029,6 +1134,9 @@ class CodeAnalyzer:
         return fields
 
     def get_calls(self) -> list[CallInfo]:
+        if self._calls_cache is not None:
+            return self._calls_cache
+
         if not self._language:
             return []
 
@@ -1091,6 +1199,7 @@ class CodeAnalyzer:
                     )
                 )
 
+        self._calls_cache = calls
         return calls
 
     def get_imports(self) -> list[ImportInfo]:
