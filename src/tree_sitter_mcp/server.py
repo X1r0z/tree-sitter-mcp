@@ -278,9 +278,10 @@ def get_function_strings(path: str, function_name: str, class_name: str | None =
     try:
         path = os.path.realpath(path)
         project = ProjectAnalyzer(path)
-        strings = project.get_function_strings(function_name, class_name)
-        if not strings:
+        functions = project.get_all_functions_by_name(function_name, class_name)
+        if not functions:
             return {"error": f"Function '{function_name}' not found"}
+        strings = project.get_function_strings(function_name, class_name)
         return {
             "path": path,
             "files_searched": len(project.files),

@@ -3,11 +3,24 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 
 import tree_sitter
 
 from .languages import detect_language, get_language, get_language_info, get_parser
+
+
+@lru_cache(maxsize=128)
+def _get_compiled_query(language: str, query_str: str) -> tree_sitter.Query | None:
+    """Get a cached compiled query for the given language and query string."""
+    lang = get_language(language)
+    if not lang:
+        return None
+    try:
+        return tree_sitter.Query(lang, query_str)
+    except Exception:
+        return None
 
 
 @dataclass
@@ -211,12 +224,11 @@ class CodeAnalyzer:
         if not self._tree or not self._language:
             return {}
 
-        lang = get_language(self._language)
-        if not lang:
+        query = _get_compiled_query(self._language, query_str)
+        if not query:
             return {}
 
         try:
-            query = tree_sitter.Query(lang, query_str)
             cursor = tree_sitter.QueryCursor(query)
             return cursor.captures(self._tree.root_node)
         except Exception:
@@ -637,7 +649,8 @@ class CodeAnalyzer:
             class_name = self._node_text(class_name_node) if class_name_node else ""
             return [f.name for f in self._extract_field_infos_js_like(class_node, class_name)]
 
-        fields = []
+        fields: list[str] = []
+        seen: set[str] = set()
         field_types = {
             "field_definition",
             "field_declaration",
@@ -649,34 +662,47 @@ class CodeAnalyzer:
             "constructor_declaration",
         }
 
-        def walk(node: tree_sitter.Node):
+        def add_field(name: str) -> None:
+            if name and name not in seen:
+                seen.add(name)
+                fields.append(name)
+
+        def walk(node: tree_sitter.Node, inside_method: bool = False):
             if node.type in method_types:
+                if self._language != "python":
+                    return
+                for child in node.children:
+                    walk(child, inside_method=True)
                 return
             if node.type in field_types:
                 for child in node.children:
                     if child.type in ("identifier", "property_identifier", "field_identifier"):
-                        fields.append(self._node_text(child))
+                        add_field(self._node_text(child))
                         break
                     if child.type == "variable_declarator":
                         for sub in child.children:
                             if sub.type == "identifier":
-                                fields.append(self._node_text(sub))
+                                add_field(self._node_text(sub))
                                 break
                         break
                 return
-            if self._language == "python" and node.type == "expression_statement":
+            if self._language == "python" and node.type == "expression_statement" and inside_method:
                 for child in node.children:
                     if child.type == "assignment":
-                        for sub in child.children:
-                            if sub.type == "identifier":
-                                text = self._node_text(sub)
-                                if not text.startswith("self."):
-                                    fields.append(text)
-                                break
+                        left_node = child.child_by_field_name("left")
+                        if left_node is not None and left_node.type == "attribute":
+                            obj_node = left_node.child_by_field_name("object")
+                            attr_node = left_node.child_by_field_name("attribute")
+                            if (
+                                obj_node is not None
+                                and attr_node is not None
+                                and self._node_text(obj_node) == "self"
+                            ):
+                                add_field(self._node_text(attr_node))
                         break
                 return
             for child in node.children:
-                walk(child)
+                walk(child, inside_method)
 
         walk(class_node)
         return fields
@@ -918,6 +944,7 @@ class CodeAnalyzer:
             return self._extract_field_infos_js_like(class_node, class_name)
 
         fields: list[FieldInfo] = []
+        seen: set[str] = set()
         field_types = {"field_definition", "field_declaration"}
         method_types = {
             "function_definition",
@@ -926,8 +953,24 @@ class CodeAnalyzer:
             "constructor_declaration",
         }
 
-        def walk(node: tree_sitter.Node):
+        def add_field(name: str, location: Location, field_type: str | None) -> None:
+            if name and name not in seen:
+                seen.add(name)
+                fields.append(
+                    FieldInfo(
+                        name=name,
+                        location=location,
+                        field_type=field_type,
+                        class_name=class_name,
+                    )
+                )
+
+        def walk(node: tree_sitter.Node, inside_method: bool = False):
             if node.type in method_types:
+                if self._language != "python":
+                    return
+                for child in node.children:
+                    walk(child, inside_method=True)
                 return
             if node.type in field_types:
                 name = ""
@@ -953,40 +996,32 @@ class CodeAnalyzer:
                     ):
                         field_type = self._node_text(child)
                 if name:
-                    fields.append(
-                        FieldInfo(
-                            name=name,
-                            location=self._node_location(node),
-                            field_type=field_type,
-                            class_name=class_name,
-                        )
-                    )
+                    add_field(name, self._node_location(node), field_type)
                 return
-            if self._language == "python" and node.type == "expression_statement":
+            if self._language == "python" and node.type == "expression_statement" and inside_method:
                 for child in node.children:
                     if child.type == "assignment":
                         name = ""
                         field_type = None
-                        for sub in child.children:
-                            if sub.type == "identifier":
-                                text = self._node_text(sub)
-                                if not text.startswith("self."):
-                                    name = text
-                            elif sub.type == "type":
-                                field_type = self._node_text(sub)
+                        left_node = child.child_by_field_name("left")
+                        if left_node is not None and left_node.type == "attribute":
+                            obj_node = left_node.child_by_field_name("object")
+                            attr_node = left_node.child_by_field_name("attribute")
+                            if (
+                                obj_node is not None
+                                and attr_node is not None
+                                and self._node_text(obj_node) == "self"
+                            ):
+                                name = self._node_text(attr_node)
+                        type_node = child.child_by_field_name("type")
+                        if type_node is not None:
+                            field_type = self._node_text(type_node)
                         if name:
-                            fields.append(
-                                FieldInfo(
-                                    name=name,
-                                    location=self._node_location(child),
-                                    field_type=field_type,
-                                    class_name=class_name,
-                                )
-                            )
+                            add_field(name, self._node_location(child), field_type)
                         break
                 return
             for child in node.children:
-                walk(child)
+                walk(child, inside_method)
 
         walk(class_node)
         return fields

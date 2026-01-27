@@ -42,9 +42,11 @@ def find_files(path: str) -> list[str]:
     """
     directory = _validate_directory_path(path)
     extensions = get_supported_extensions()
-    files = []
-    for ext in extensions:
-        files.extend(str(p.resolve()) for p in directory.rglob(f"*{ext}") if p.is_file())
+    files = [
+        str(p.resolve())
+        for p in directory.rglob("*")
+        if p.is_file() and p.suffix.lower() in extensions
+    ]
     return sorted(set(files))
 
 
