@@ -53,6 +53,8 @@ def find_files(path: str) -> list[str]:
 class ProjectAnalyzer:
     """Analyzes multiple source files in a project."""
 
+    MAX_CACHED_ANALYZERS: int = 256
+
     def __init__(self, path: str):
         """Initialize with a directory.
 
@@ -62,15 +64,28 @@ class ProjectAnalyzer:
         self.path = path
         self.files = find_files(path)
         self._analyzers: dict[str, CodeAnalyzer] = {}
+        self._analyzer_order: list[str] = []
 
     def _get_analyzer(self, file_path: str) -> CodeAnalyzer | None:
-        """Get or create an analyzer for a file."""
-        if file_path not in self._analyzers:
-            try:
-                self._analyzers[file_path] = CodeAnalyzer(file_path)
-            except Exception:
-                return None
-        return self._analyzers[file_path]
+        """Get or create an analyzer for a file with LRU eviction."""
+        if file_path in self._analyzers:
+            self._analyzer_order.remove(file_path)
+            self._analyzer_order.append(file_path)
+            return self._analyzers[file_path]
+
+        try:
+            analyzer = CodeAnalyzer(file_path)
+        except Exception:
+            return None
+
+        self._analyzers[file_path] = analyzer
+        self._analyzer_order.append(file_path)
+
+        while len(self._analyzers) > self.MAX_CACHED_ANALYZERS:
+            oldest = self._analyzer_order.pop(0)
+            del self._analyzers[oldest]
+
+        return analyzer
 
     def get_functions(self) -> list[FunctionInfo]:
         """Get all functions from all files."""

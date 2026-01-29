@@ -194,6 +194,7 @@ class CodeAnalyzer:
             self._load_file(file_path)
 
     def _load_file(self, file_path: str) -> None:
+        """Load file content and detect language (lazy parsing)."""
         path = Path(file_path)
         if not path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
@@ -209,6 +210,12 @@ class CodeAnalyzer:
         if not self._parser:
             raise ValueError(f"Unsupported language: {self._language}")
 
+    def _ensure_tree(self) -> None:
+        """Parse the source code if not already parsed (lazy parsing)."""
+        if self._tree is not None:
+            return
+        if self._parser is None or self._source is None:
+            return
         self._tree = self._parser.parse(self._source)
 
     def _node_location(self, node: tree_sitter.Node) -> Location:
@@ -224,6 +231,7 @@ class CodeAnalyzer:
         return self._source[node.start_byte : node.end_byte].decode("utf-8", errors="replace")
 
     def _run_query(self, query_str: str) -> dict[str, list[tree_sitter.Node]]:
+        self._ensure_tree()
         if not self._tree or not self._language:
             return {}
 
@@ -1269,12 +1277,20 @@ class CodeAnalyzer:
         return strings
 
     def find_symbols(self, name: str) -> list[dict]:
-        if not self._tree or not self._source:
+        if not self._source:
             return []
 
-        refs = []
+        name_bytes = name.encode("utf-8")
+        if name_bytes not in self._source:
+            return []
 
-        def walk(node: tree_sitter.Node):
+        self._ensure_tree()
+        if not self._tree:
+            return []
+
+        refs: list[dict] = []
+
+        def walk(node: tree_sitter.Node) -> None:
             if node.is_named and self._node_text(node) == name:
                 refs.append(
                     {
