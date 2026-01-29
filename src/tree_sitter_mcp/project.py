@@ -65,6 +65,25 @@ class ProjectAnalyzer:
         self.files = find_files(path)
         self._analyzers: dict[str, CodeAnalyzer] = {}
         self._analyzer_order: list[str] = []
+        self._file_contents_cache: dict[str, bytes] = {}
+
+    def _get_file_contents(self, file_path: str) -> bytes | None:
+        """Get cached file contents."""
+        if file_path in self._file_contents_cache:
+            return self._file_contents_cache[file_path]
+        try:
+            content = Path(file_path).read_bytes()
+            self._file_contents_cache[file_path] = content
+            return content
+        except Exception:
+            return None
+
+    def _file_contains_text(self, file_path: str, text: str) -> bool:
+        """Check if a file contains the specified text without parsing AST."""
+        content = self._get_file_contents(file_path)
+        if content is None:
+            return False
+        return text.encode("utf-8") in content
 
     def _get_analyzer(self, file_path: str) -> CodeAnalyzer | None:
         """Get or create an analyzer for a file with LRU eviction."""
@@ -105,10 +124,12 @@ class ProjectAnalyzer:
                 classes.extend(analyzer.get_classes())
         return classes
 
-    def get_fields(self, class_name: str | None = None) -> list[FieldInfo]:
+    def get_fields(self, class_name: str) -> list[FieldInfo]:
         """Get all fields from all files, optionally filtered by class name."""
         fields = []
         for file_path in self.files:
+            if not self._file_contains_text(file_path, class_name):
+                continue
             analyzer = self._get_analyzer(file_path)
             if analyzer:
                 fields.extend(analyzer.get_fields(class_name))
@@ -144,6 +165,8 @@ class ProjectAnalyzer:
     def get_function_by_name(self, name: str, class_name: str | None = None) -> FunctionInfo | None:
         """Find a function by name across all files, optionally filtering by class_name."""
         for file_path in self.files:
+            if not self._file_contains_text(file_path, name):
+                continue
             analyzer = self._get_analyzer(file_path)
             if analyzer:
                 func = analyzer.get_function_by_name(name, class_name)
@@ -157,6 +180,8 @@ class ProjectAnalyzer:
         """Find all functions with a given name across all files, optionally filtering by class_name."""
         functions = []
         for file_path in self.files:
+            if not self._file_contains_text(file_path, name):
+                continue
             analyzer = self._get_analyzer(file_path)
             if analyzer:
                 funcs = analyzer.get_all_functions_by_name(name, class_name)
@@ -167,6 +192,8 @@ class ProjectAnalyzer:
         """Find all callers of a function across all files."""
         callers = []
         for file_path in self.files:
+            if not self._file_contains_text(file_path, function_name):
+                continue
             analyzer = self._get_analyzer(file_path)
             if analyzer:
                 file_callers = analyzer.get_function_callers(function_name, class_name)
@@ -185,6 +212,8 @@ class ProjectAnalyzer:
         """Find all functions called by a function across all files."""
         results = []
         for file_path in self.files:
+            if not self._file_contains_text(file_path, function_name):
+                continue
             analyzer = self._get_analyzer(file_path)
             if analyzer:
                 funcs = analyzer.get_all_functions_by_name(function_name, class_name)
@@ -207,6 +236,8 @@ class ProjectAnalyzer:
         """Get all variables in a function across all files."""
         results = []
         for file_path in self.files:
+            if not self._file_contains_text(file_path, function_name):
+                continue
             analyzer = self._get_analyzer(file_path)
             if analyzer:
                 variables = analyzer.get_function_variables(function_name, class_name)
@@ -224,6 +255,8 @@ class ProjectAnalyzer:
         """Get all strings in a function across all files."""
         results = []
         for file_path in self.files:
+            if not self._file_contains_text(file_path, function_name):
+                continue
             analyzer = self._get_analyzer(file_path)
             if analyzer:
                 strings = analyzer.get_function_strings(function_name, class_name)
@@ -241,6 +274,8 @@ class ProjectAnalyzer:
         """Find all references to an identifier across all files."""
         refs = []
         for file_path in self.files:
+            if not self._file_contains_text(file_path, name):
+                continue
             analyzer = self._get_analyzer(file_path)
             if analyzer:
                 file_refs = analyzer.find_symbols(name)
@@ -250,6 +285,8 @@ class ProjectAnalyzer:
     def get_class_by_name(self, class_name: str) -> ClassInfo | None:
         """Find a class by name across all files."""
         for file_path in self.files:
+            if not self._file_contains_text(file_path, class_name):
+                continue
             analyzer = self._get_analyzer(file_path)
             if analyzer:
                 cls = analyzer.get_class_by_name(class_name)

@@ -1000,7 +1000,7 @@ class CodeAnalyzer:
 
         return super_classes
 
-    def get_fields(self, class_name: str | None = None) -> list[FieldInfo]:
+    def get_fields(self, class_name: str) -> list[FieldInfo]:
         """Get all fields, optionally filtered by class name."""
         if not self._language:
             return []
@@ -1013,7 +1013,7 @@ class CodeAnalyzer:
         fields: list[FieldInfo] = []
 
         for cls in classes:
-            if class_name and cls.name != class_name:
+            if cls.name != class_name:
                 continue
             field_infos = self._get_fields_from_class_node(cls.name)
             fields.extend(field_infos)
