@@ -157,10 +157,7 @@ def cmd_functions(args: argparse.Namespace) -> dict:
         path = os.path.realpath(args.path)
         query = args.query or ""
         project = ProjectAnalyzer(path)
-        functions = project.get_functions()
-        if query:
-            q = query.lower()
-            functions = [f for f in functions if q in f.name.lower()]
+        functions = project.get_functions(query=query)
         return {
             "path": path,
             "files_searched": len(project.files),
@@ -177,10 +174,7 @@ def cmd_classes(args: argparse.Namespace) -> dict:
         path = os.path.realpath(args.path)
         query = args.query or ""
         project = ProjectAnalyzer(path)
-        classes = project.get_classes()
-        if query:
-            q = query.lower()
-            classes = [c for c in classes if q in c.name.lower()]
+        classes = project.get_classes(query=query)
         return {
             "path": path,
             "files_searched": len(project.files),
@@ -215,10 +209,7 @@ def cmd_imports(args: argparse.Namespace) -> dict:
         path = os.path.realpath(args.path)
         query = args.query or ""
         project = ProjectAnalyzer(path)
-        imports = project.get_imports()
-        if query:
-            q = query.lower()
-            imports = [i for i in imports if q in i.module.lower()]
+        imports = project.get_imports(query=query)
         return {
             "path": path,
             "files_searched": len(project.files),
@@ -235,10 +226,7 @@ def cmd_variables(args: argparse.Namespace) -> dict:
         path = os.path.realpath(args.path)
         query = args.query or ""
         project = ProjectAnalyzer(path)
-        variables = project.get_variables()
-        if query:
-            q = query.lower()
-            variables = [v for v in variables if q in v.name.lower()]
+        variables = project.get_variables(query=query)
         return {
             "path": path,
             "files_searched": len(project.files),

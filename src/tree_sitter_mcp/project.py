@@ -106,22 +106,30 @@ class ProjectAnalyzer:
 
         return analyzer
 
-    def get_functions(self) -> list[FunctionInfo]:
+    def get_functions(self, query: str = "") -> list[FunctionInfo]:
         """Get all functions from all files."""
         functions = []
         for file_path in self.files:
+            if query and not self._file_contains_text(file_path, query):
+                continue
             analyzer = self._get_analyzer(file_path)
             if analyzer:
-                functions.extend(analyzer.get_functions())
+                for f in analyzer.get_functions():
+                    if not query or query in f.name:
+                        functions.append(f)
         return functions
 
-    def get_classes(self) -> list[ClassInfo]:
+    def get_classes(self, query: str = "") -> list[ClassInfo]:
         """Get all classes from all files."""
         classes = []
         for file_path in self.files:
+            if query and not self._file_contains_text(file_path, query):
+                continue
             analyzer = self._get_analyzer(file_path)
             if analyzer:
-                classes.extend(analyzer.get_classes())
+                for c in analyzer.get_classes():
+                    if not query or query in c.name:
+                        classes.append(c)
         return classes
 
     def get_fields(self, class_name: str) -> list[FieldInfo]:
@@ -144,22 +152,30 @@ class ProjectAnalyzer:
                 calls.extend(analyzer.get_calls())
         return calls
 
-    def get_imports(self) -> list[ImportInfo]:
+    def get_imports(self, query: str = "") -> list[ImportInfo]:
         """Get all imports from all files."""
         imports = []
         for file_path in self.files:
+            if query and not self._file_contains_text(file_path, query):
+                continue
             analyzer = self._get_analyzer(file_path)
             if analyzer:
-                imports.extend(analyzer.get_imports())
+                for i in analyzer.get_imports():
+                    if not query or query in i.module:
+                        imports.append(i)
         return imports
 
-    def get_variables(self) -> list[VariableInfo]:
+    def get_variables(self, query: str = "") -> list[VariableInfo]:
         """Get all variables from all files."""
         variables = []
         for file_path in self.files:
+            if query and not self._file_contains_text(file_path, query):
+                continue
             analyzer = self._get_analyzer(file_path)
             if analyzer:
-                variables.extend(analyzer.get_variables())
+                for v in analyzer.get_variables():
+                    if not query or query in v.name:
+                        variables.append(v)
         return variables
 
     def get_function_by_name(self, name: str, class_name: str | None = None) -> FunctionInfo | None:
